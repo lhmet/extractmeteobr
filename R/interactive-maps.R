@@ -22,6 +22,9 @@
 #' One point is created inside each polygon with
 #' [sf::st_point_on_surface()]. Clicking a point displays the attributes
 #' selected by `popup_vars`; hovering displays `popup_title`.
+#' The function supports `tmap` version 4.0 and later. It uses `tm_popup()`
+#' when exported by the installed version, otherwise the equivalent
+#' `popup.vars` and `id` layer arguments.
 #'
 #' If `raster` has a time coordinate, its first time value is appended to the
 #' map title. The caller remains responsible for selecting the raster layer to
@@ -70,7 +73,26 @@ make_interactive_spatial_map <- function(
   polygon_color <- if (is.null(raster)) "#2C7FB8" else "#238B45"
   polygon_fill_alpha <- if (is.null(raster)) 0.1 else 0
 
+  # tmap 4.0 uses layer arguments for popups; later versions export tm_popup().
+  popup_options <- if ("tm_popup" %in% getNamespaceExports("tmap")) {
+    list(
+      popup = getExportedValue("tmap", "tm_popup")(
+        vars = popup_vars,
+        title = popup_title
+      )
+    )
+  } else {
+    list(popup.vars = popup_vars, id = popup_title)
+  }
   tmap::tmap_mode("view")
+  point_layer <- do.call(
+    tmap::tm_dots,
+    c(
+      list(fill = "#D7301F", size = 0.05, hover = popup_title),
+      popup_options
+    )
+  )
+
   map <-
     tmap::tm_shape(polygons) +
     tmap::tm_polygons(
@@ -79,15 +101,7 @@ make_interactive_spatial_map <- function(
       col = polygon_color
     ) +
     tmap::tm_shape(polygon_points) +
-    tmap::tm_dots(
-      fill = "#D7301F",
-      size = 0.05,
-      popup = tmap::tm_popup(
-        vars = popup_vars,
-        title = popup_title
-      ),
-      hover = popup_title
-    )
+    point_layer
 
   if (!is.null(raster)) {
     checkmate::assert_class(raster, "SpatRaster")

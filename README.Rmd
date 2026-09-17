@@ -508,7 +508,8 @@ municipal_monthly_means <- join_and_write_municipal_means(
 ## Visualização: `make_interactive_spatial_map()`
 
 Cria um mapa `tmap` com os polígonos e um ponto clicável por feição. Pode incluir
-um raster com rótulo, unidade e data. A função retorna o mapa sem imprimi-lo e
+um raster com rótulo, unidade e data. Requer `tmap` 4.0 ou posterior.
+A função retorna o mapa sem imprimi-lo e
 não participa do pipeline principal. `popup_vars` define os campos exibidos e
 `popup_title` define o título do popup e o texto mostrado ao passar o cursor.
 

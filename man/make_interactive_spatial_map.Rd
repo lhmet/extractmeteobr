@@ -43,6 +43,9 @@ points and, optionally, a raster layer with a labelled legend.
 One point is created inside each polygon with
 \code{\link[sf:st_point_on_surface]{sf::st_point_on_surface()}}. Clicking a point displays the attributes
 selected by \code{popup_vars}; hovering displays \code{popup_title}.
+The function supports \code{tmap} version 4.0 and later. It uses \code{tm_popup()}
+when exported by the installed version, otherwise the equivalent
+\code{popup.vars} and \code{id} layer arguments.
 
 If \code{raster} has a time coordinate, its first time value is appended to the
 map title. The caller remains responsible for selecting the raster layer to

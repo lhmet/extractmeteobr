@@ -13,3 +13,4 @@
 ^\.agents$
 ^\.codex$
 ^docs$
+^vignettes/readme-bck\.Rmd$
