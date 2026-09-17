@@ -1,0 +1,15 @@
+^extract-meteo-br\.Rproj$
+^\.Rproj\.user$
+^README\.Rmd$
+^README_files$
+^references$
+^AGENTS\.md$
+^data$
+^inst/ext$
+^inst/validation$
+^\.RData$
+^\.github$
+^LICENSE\.md$
+^\.agents$
+^\.codex$
+^docs$

@@ -1,0 +1,18 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+README.html
+inst/doc
+
+# External input datasets and locally generated results
+/inst/ext/
+/data/
+
+# Local Codex configuration and package build/check artifacts
+/.codex/
+/*.tar.gz
+/*.Rcheck/
+.Renviron
+.env
+.env.*

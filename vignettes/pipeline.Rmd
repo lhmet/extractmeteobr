@@ -1,0 +1,163 @@
+---
+title: "Pipeline de extração de médias meteorológicas municipais"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Pipeline de extração de médias meteorológicas municipais}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+## Visão geral
+
+O **extractmeteobr** converte rasters meteorológicos gradeados do BR-DWGD em
+séries temporais mensais ponderadas pela área para polígonos brasileiros
+(municípios, estados ou outros conjuntos de polígonos). Nenhum dado externo
+(NetCDFs do BR-DWGD, shapefiles do IBGE) é distribuído com o pacote: todos os
+caminhos de arquivo são argumentos obrigatórios, fornecidos pelo usuário.
+
+O fluxo tem duas partes:
+
+1. **Etapa única (Brasil inteiro)**: agregar os NetCDFs diários do BR-DWGD em
+   NetCDFs mensais.
+2. **Etapa por região (ex.: um estado)**: carregar polígonos, recortar os
+   rasters mensais, interpolar células ausentes na borda e calcular a média
+   ponderada pela área para cada polígono.
+
+## Etapa 0: agregação mensal (uma vez, Brasil inteiro)
+
+```{r}
+library(extractmeteobr)
+
+monthly_files <- aggregate_daily_netcdfs_by_month(
+  data_path = "path/to/br-dwgd/daily",
+  variables = c("pr", "ETo"),
+  aggregation_functions = list(pr = "sum", ETo = "sum"),
+  overwrite = FALSE
+)
+```
+
+Essa etapa não precisa ser repetida a cada execução: os NetCDFs mensais já
+gerados são reaproveitados enquanto `overwrite = FALSE`.
+
+## Etapas 1 a 4: fluxo completo com `run_meteo_pipeline()`
+
+Para uma região específica, `run_meteo_pipeline()` encadeia o carregamento de
+polígonos, o recorte dos rasters mensais, o preenchimento de células ausentes
+e o cálculo das médias ponderadas pela área, escrevendo o resultado em um
+arquivo `.fst`:
+
+```{r}
+resultado <- run_meteo_pipeline(
+  states = "sul",
+  monthly_data_path = "path/to/br-dwgd/monthly",
+  municipality_data_path = "path/to/ibge/BR_Municipios_2022.shp",
+  output_dir = "path/to/output",
+  variables = c("pr", "ETo"),
+  file_stem = "municipal-monthly-meteorology",
+  return_intermediate = FALSE
+)
+```
+
+`states` aceita um vetor de siglas de estado (`c("rs", "sc")`) ou o nome de
+uma região (`"norte"`, `"nordeste"`, `"centro-oeste"`, `"sudeste"`, `"sul"`).
+
+## Executando as etapas individualmente
+
+Cada etapa também está disponível como função independente, útil para
+inspecionar resultados intermediários ou compor um fluxo customizado.
+
+### 1. Carregar os polígonos municipais
+
+```{r}
+reference_crs <- terra::rast(
+  "path/to/br-dwgd/daily/pr_..._BR-DWGD.nc"
+) |>
+  terra::crs()
+
+municipalities <- load_ibge_municipalities(
+  states = "rs",
+  data_path = "path/to/ibge/BR_Municipios_2022.shp",
+  target_crs = reference_crs,
+  remove_lagoons = FALSE
+)
+```
+
+### 2. Recortar os rasters mensais para a região
+
+```{r}
+monthly_rasters <- crop_netcdfs(
+  data_path = "path/to/br-dwgd/monthly",
+  polygons = municipalities,
+  file_prefixes = c(pr = "pr_mly_", ETo = "ETo_mly_")
+)
+```
+
+### 3. Interpolar células ausentes na borda dos polígonos
+
+```{r}
+filled_monthly_rasters <- fill_missing_raster_cells(
+  rasters = monthly_rasters,
+  polygons = municipalities
+)
+```
+
+### 4. Calcular as médias ponderadas pela área e exportar
+
+```{r}
+area_weighted_means <- extract_area_weighted_mean(
+  rasters = filled_monthly_rasters,
+  polygons = municipalities
+)
+
+municipal_monthly_means <- join_and_write_municipal_means(
+  means = area_weighted_means,
+  polygons = municipalities,
+  output_dir = "path/to/output",
+  file_stem = "municipal-monthly-meteorology"
+)
+```
+
+## Inspeção visual (opcional)
+
+Com o pacote `tmap` instalado, é possível visualizar interativamente os
+polígonos e, opcionalmente, uma camada raster:
+
+```{r}
+municipality_map <- make_interactive_spatial_map(
+  polygons = municipalities,
+  popup_vars = c("Município" = "municipality", "UF" = "state"),
+  popup_title = "municipality",
+  raster = monthly_rasters$pr[[1]],
+  raster_label = "Precipitação mensal",
+  raster_units = "mm"
+)
+
+print(municipality_map)
+```
+
+## Validação dos cálculos espaciais
+
+A suíte de testes (`tests/testthat/test-area-weighted-mean.R`) verifica, com
+uma grade sintética e polígonos controlados:
+
+* concordância entre o cálculo explícito da média ponderada e a implementação
+  por matriz esparsa;
+* tratamento correto de células parcialmente interceptadas;
+* exclusão de células `NA` do numerador e do denominador;
+* distinção entre valores ausentes e zeros observados;
+* uma camada inteiramente ausente (resultado `NA`, não zero);
+* um polígono menor que uma célula, na borda da grade.
+
+Execute-a com `devtools::test()`.
+
+O diretório `inst/validation/` (fora da árvore instalável do pacote) contém
+uma validação independente com dados reais do BR-DWGD e do IBGE, não
+executada automaticamente por depender de arquivos externos.

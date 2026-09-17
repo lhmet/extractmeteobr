@@ -1,0 +1,258 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+
+```
+
+# extractmeteobr
+
+<!-- badges: start -->
+
+<!-- badges: end -->
+
+
+O **extract-meteo-br** transforma dados meteorológicos gradeados do Brasil em
+séries temporais calculadas sobre polígonos. O fluxo atual utiliza precipitação
+(`pr`) e evapotranspiração de referência (`ETo`) mensais do BR-DWGD e produz
+médias espaciais ponderadas por área para municípios.
+
+Embora o produto atual seja municipal, as operações centrais de recorte,
+preenchimento e cálculo das médias aceitam outros polígonos, como bacias
+hidrográficas e glebas.
+
+## Instalação
+
+O pacote ainda não está no CRAN. Instale a versão em desenvolvimento com:
+
+```r
+pak::pak("lhmet/extractmeteobr")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Dados de entrada
+
+O pacote **não distribui** dados brutos: todos os caminhos de arquivo são
+argumentos obrigatórios das funções (não há valores padrão apontando para
+diretórios internos do pacote). No repositório-fonte deste projeto, os dados
+usados em desenvolvimento e validação ficam em `inst/ext/` (fora da árvore
+instalável do pacote, listado em `.Rbuildignore`):
+
+### Dados geográficos
+
+A malha municipal e os estados do Brasil (IBGE) ficam em `inst/ext/ibge`:
+
+```{r}
+fs::dir_tree(here::here("inst/ext/ibge"))
+```
+
+### Dados meteorológicos
+
+Os dados meteorológicos diários gradeados do BR-DWGD para o Brasil ficam em
+`inst/ext/br-dwgd`:
+
+```{r}
+fs::dir_tree(here::here("inst/ext/br-dwgd"), type = "file")
+```
+
+# Processamento de dados
+
+O processamento será realizada para um conjunto de polígonos (ex: municípios de um estado) para os quais calcula-se a média espacial de cada variável meteorológica.
+
+
+A etapa inicial consiste em agregar dados meteorológicos na escala mensal em *SpatRaster*. Este pré-processamentro só precisa ser feito uma única vez. Este processo agrega os dados para todo o Brasil.
+
+
+```{r, eval = FALSE}
+library(extractmeteobr)
+
+monthly_files <- aggregate_daily_netcdfs_by_month(
+  data_path = here::here("inst/ext/br-dwgd/update-2026-09-08"),
+  variables = c("pr", "ETo"),
+  aggregation_functions = list(
+    pr = "sum",
+    ETo = "sum"
+  ),
+  overwrite = FALSE
+)
+```
+
+
+Com os dados mensais das variáveis meteorológicas a seguinte sequência de processamento é realizada.
+
+1.  carregar polígonos de uma região (ex: polígonos de municípios de um estado do Brasil, polígonos de bacias hidrográficas do Sul do Brasil, polígonos de glebas de um estado, etc)
+
+2.  Recortar *SpatRaster* dos dados meteorológicos para o domínio espacial dos polígonos. No caso de polígonos de municípios, seria o estado dos municípios que definiria a área de recorte dos dados. Não é aplicado máscara e na área do raster fora dos polígonos (mas dentro da extent da região) são mantidos dados.
+
+3.  Para evitar erros nos cálculos das médias sobre a área dos polígonos (ex.: municípios), faz-se uma expansão no *SpatRaster* de dados meteorológicos nas bordas externas dos polígonos (que definem o contorno do estado, no caso de os polígonos de municípios). Isso evita `NaN` na média espacial de uma variável meteorológica em municípios pequenos nas bordas do domínio. A interpolação pelo inverso da distância é usada para isso.
+
+4.  Com *SpatRaster* preenchido para as bordas, calcula-se a média espacial sobre a área de cada município, ponderada pela área que cada célula ocupa dentro do munípio. Os resultados são armazenados em um tibble e exportados para 
+um arquivo `.fst`.
+
+
+## Pipe de processamento
+
+O fluxo acima é implementado pelas funções do pacote, orquestradas por
+`run_meteo_pipeline()`. O vignette `vignette("pipeline", package = "extractmeteobr")`
+mostra o fluxo completo, tanto pela função orquestradora quanto etapa por
+etapa.
+
+```{r pipeline-diagram, fig.width = 13.5, fig.height = 2.2, echo=FALSE}
+library(DiagrammeR)
+
+grViz(
+  "
+digraph pipeline {
+  rankdir = LR
+  graph [fontname = 'Helvetica']
+  node [shape = box, style = 'rounded,filled', fillcolor = '#EFF3FF',
+        color = '#6BAED6', fontname = 'Helvetica', fontsize = 10]
+  edge [color = '#6BAED6']
+
+  s0 [label = '0. Agregação mensal\n(uma vez, Brasil)',
+      fillcolor = '#FDE9D9', color = '#F4A460']
+
+  subgraph cluster_estado {
+    label = 'Por estado'
+    fontname = 'Helvetica'
+    fontsize = 10
+    style = dashed
+    color = '#999999'
+
+    s1 [label = '1. Carregar municípios\ndo estado']
+    s2 [label = '2. Recortar SpatRaster\nmensal para o estado']
+    s3 [label = '3. Contar células válidas\ne interpolar NAs']
+    s4 [label = '4. Média espacial por município,\nexportar tibble para .fst']
+
+    s1 -> s2 -> s3 -> s4
+  }
+
+  s0 -> s1
+}
+",
+  width = 1250,
+  height = 220
+)
+```
+
+| Etapa | Arquivo em `R/` | Função(ões) | Papel no pipe |
+|---|---|---|---|
+| 0 | `aggregate-monthly.R` | `aggregate_daily_netcdfs_by_month()`, `aggregate_daily_netcdf_by_month()` | Agrega os NetCDFs diários (`pr`, `ETo`) em `SpatRaster` mensais para todo o Brasil. Executado uma única vez, fora do loop por estado. |
+| 1 | `geographic-data.R` | `load_ibge_municipalities()`, `load_ibge_states()`, `load_polygon_data()`, `select_largest_polygon()` | Carrega e padroniza polígonos (municípios ou estados) de um ou mais estados (`states`), reprojetados para o CRS dos rasters BR-DWGD, com opção de remover as lagoas (`remove_lagoons`). |
+| 2 | `crop-netcdfs.R` | `crop_netcdfs()` | Recorta o `SpatRaster` mensal (gerado na etapa 0) para a extensão retangular dos polígonos. |
+| 3 | `fill-missing-raster-cells.R` | `fill_missing_raster_cells()` | Interpola por IDW as células ausentes que interceptam os polígonos, evitando `NA` na média espacial de municípios pequenos nas bordas do domínio. |
+| 4 | `area-weighted-mean.R`, `municipal-output.R` | `extract_area_weighted_mean()`, `join_and_write_municipal_means()` | Calcula a média espacial mensal por polígono, ponderada pela área de interseção polígono-célula, e exporta o resultado em `.fst`. |
+| — | `run-pipeline.R` | `run_meteo_pipeline()` | Orquestra as etapas 1 a 4 para um conjunto de estados ou uma região. |
+| — | `interactive-maps.R` | `make_interactive_spatial_map()` | Mapa interativo opcional (requer o pacote `tmap`) para inspecionar polígonos e rasters. |
+
+
+
+## Validação dos cálculos espaciais
+
+O cálculo das médias espaciais ponderadas pela área é verificado em dois níveis complementares.
+
+### Testes automatizados com dados sintéticos
+
+O arquivo `tests/testthat/test-area-weighted-mean.R` utiliza uma grade sintética e polígonos controlados para verificar:
+
+* concordância entre o cálculo explícito e a implementação por matriz esparsa;
+* células parcialmente interceptadas;
+* exclusão de células com `NA` do numerador e do denominador;
+* distinção entre valores ausentes e zeros observados;
+* camada inteiramente ausente;
+* polígono pequeno na borda da grade;
+* preservação dos resultados por `extract_area_weighted_mean()`.
+
+Os testes podem ser executados com:
+
+```r
+testthat::test_file(
+  "tests/testthat/test-area-weighted-mean.R"
+)
+```
+
+Ou, juntamente com todos os testes do projeto:
+
+```r
+devtools::test()
+```
+
+### Validação com dados reais
+
+O diretório `inst/validation/` contém uma validação independente com dados reais do BR-DWGD e polígonos municipais do IBGE:
+
+```text
+inst/validation/
+├── validate-area-weighted-mean-real-data.R
+└── run-area-weighted-mean-real-data.R
+```
+
+O primeiro arquivo define `validate_area_weighted_mean_real_data()`. O segundo seleciona uma variável, um município e um mês e executa a validação.
+
+Para cada célula \(i\) interceptada pelo município, o peso é calculado explicitamente como
+
+$$
+w_i = f_i A_i,
+$$
+
+em que \(f_i\) é a fração da célula contida no município e \(A_i\) é sua área física. A média de referência é:
+
+$$
+\bar{x} = \frac{\sum_{i \in V} x_i f_i A_i}
+     {\sum_{i \in V} f_i A_i},
+$$
+
+sendo \(V\) o conjunto de células com valores válidos.
+
+O resultado explícito é comparado com:
+
+1. `calculate_area_weighted_mean()` (interna), baseada em matriz esparsa;
+2. `extract_area_weighted_mean()`, responsável pela integração de múltiplas variáveis.
+
+A validação retorna:
+
+```r
+validation$summary
+validation$cells
+```
+
+`validation$summary` apresenta as médias calculadas pelos três métodos, as diferenças absoluta e relativa, a cobertura espacial válida e o resultado da comparação numérica.
+
+`validation$cells` permite auditar, célula por célula:
+
+* valor meteorológico;
+* fração interceptada;
+* área física;
+* peso espacial;
+* disponibilidade do dado;
+* contribuição para o numerador.
+
+A validação é considerada aprovada quando `validation_passed` é `TRUE`, considerando a tolerância numérica definida.
+
+### Distinção entre teste e validação
+
+Os testes sintéticos são rápidos, autocontidos e executados automaticamente. A validação com dados reais depende dos arquivos externos do *BR-DWGD* e do *IBGE* e, por isso, não faz parte da execução automática de `devtools::test()`.
+
+
+
+

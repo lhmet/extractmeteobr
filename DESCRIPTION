@@ -1,0 +1,37 @@
+Package: extractmeteobr
+Title: Extract Area-Weighted Municipal Meteorological Time Series for Brazil
+Version: 0.0.0.9000
+Authors@R:
+    person("LHMET", email = "lhmet@ufsm.br", role = c("aut", "cre"))
+Description: Converts gridded BR-DWGD meteorological NetCDF rasters into
+    area-weighted time series for Brazilian municipalities and states.
+    Provides functions to load IBGE administrative boundaries, crop and
+    aggregate BR-DWGD rasters, interpolate missing raster cells, calculate
+    exact polygon-cell area-weighted means, and write the resulting
+    municipal time series to disk.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+Imports:
+    checkmate,
+    cli,
+    data.table,
+    dplyr,
+    fs,
+    fst,
+    lubridate,
+    Matrix,
+    purrr,
+    sf,
+    stringr,
+    terra,
+    tibble,
+    tictoc
+Suggests:
+    knitr,
+    rmarkdown,
+    testthat (>= 3.0.0),
+    tmap
+Config/testthat/edition: 3
+VignetteBuilder: knitr
+Config/roxygen2/version: 8.1.0

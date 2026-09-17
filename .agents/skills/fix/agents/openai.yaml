@@ -1,0 +1,4 @@
+interface:
+  display_name: "Corrigir erros científicos"
+  short_description: "Diagnóstico, correção mínima e testes relevantes"
+  default_prompt: "Use $fix para diagnosticar o erro, aplicar a correção mínima e verificar o comportamento afetado."

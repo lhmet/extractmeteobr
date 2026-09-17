@@ -1,0 +1,4 @@
+interface:
+  display_name: "Planejar mudanças científicas"
+  short_description: "Planejamento incremental em modo somente leitura"
+  default_prompt: "Use $plan para analisar a mudança, propor micro-etapas e aguardar aprovação antes de implementar."

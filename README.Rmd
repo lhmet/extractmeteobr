@@ -1,0 +1,632 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# extractmeteobr
+
+<!-- badges: start -->
+
+<!-- badges: end -->
+
+O **extractmeteobr** transforma dados meteorológicos gradeados do Brasil em
+séries temporais calculadas sobre polígonos. O fluxo atual utiliza precipitação
+(`pr`) e evapotranspiração de referência (`ETo`) mensais do BR-DWGD e produz
+médias espaciais ponderadas por área para municípios.
+
+Embora o produto atual seja municipal, as operações centrais de recorte,
+preenchimento e cálculo das médias aceitam outros polígonos, como bacias
+hidrográficas e glebas.
+
+## Instalação
+
+O pacote ainda não está no CRAN. Instale a versão em desenvolvimento com:
+
+```r
+pak::pak("lhmet/extractmeteobr")
+```
+
+## Dados de entrada
+
+O pacote **não distribui** dados brutos: todos os caminhos de arquivo são
+argumentos obrigatórios das funções (não há valores padrão apontando para
+diretórios internos do pacote). No repositório-fonte deste projeto, os dados
+usados em desenvolvimento e validação ficam em `inst/ext/`.
+
+### Dados geográficos
+
+A malha municipal do IBGE e os limites estaduais ficam em `inst/ext/ibge`:
+
+```text
+fs::dir_tree(here::here("inst/ext/ibge"))
+ `/inst/ext/ibge`
+ ├── BR_Municipios_2022
+ │   ├── BR_Municipios_2022.cpg
+ │   ├── BR_Municipios_2022.dbf
+ │   ├── BR_Municipios_2022.prj
+ │   ├── BR_Municipios_2022.shp
+ │   └── BR_Municipios_2022.shx
+ ├── BR_UF_2022
+ │   ├── BR_UF_2022.cpg
+ │   ├── BR_UF_2022.dbf
+ │   ├── BR_UF_2022.prj
+ │   ├── BR_UF_2022.shp
+ │   └── BR_UF_2022.shx
+ └── areas-urbanizadas
+     ├── tabela8418-areas-urbanizadas.xlsx
+     └── tabela8418.zip
+
+```
+
+### Dados meteorológicos
+
+Os dados diários do BR-DWGD ficam em `inst/ext/br-dwgd`. Os NetCDFs mensais
+usados pelo pipeline ficam no subdiretório `monthly` da atualização.
+
+```text
+fs::dir_tree(here::here("inst/ext/br-dwgd"), type = "file")
+ `inst/ext/br-dwgd`
+ └── update-2026-09-08
+     ├── ETo_19610101_19801231_BR-DWGD_UFES_UTEXAS_v_3.2.4.nc
+     ├── ETo_19810101_20001231_BR-DWGD_UFES_UTEXAS_v_3.2.4.nc
+     ├── ETo_20010101_20251231_BR-DWGD_UFES_UTEXAS_v_3.2.4.nc
+     ├── README.txt
+     ├── pr_19610101_19801231_BR-DWGD_UFES_UTEXAS_v_3.2.4.nc
+     ├── pr_19810101_20001231_BR-DWGD_UFES_UTEXAS_v_3.2.4.nc
+     ├── pr_20010101_20251231_BR-DWGD_UFES_UTEXAS_v_3.2.4.nc
+     └── monthly
+         ├── ETo_mly_19610101_19801231_BR-DWGD_UFES_UTEXAS_v_3.2.4.nc
+         ├── ETo_mly_19810101_20001231_BR-DWGD_UFES_UTEXAS_v_3.2.4.nc
+         ├── ETo_mly_20010101_20251231_BR-DWGD_UFES_UTEXAS_v_3.2.4.nc
+         ├── pr_mly_19610101_19801231_BR-DWGD_UFES_UTEXAS_v_3.2.4.nc
+         ├── pr_mly_19810101_20001231_BR-DWGD_UFES_UTEXAS_v_3.2.4.nc
+         └── pr_mly_20010101_20251231_BR-DWGD_UFES_UTEXAS_v_3.2.4.nc
+```
+
+# Início rápido
+
+O pipeline regional parte dos NetCDFs já agregados na escala mensal. Para
+executar todas as etapas de uma região, use `run_meteo_pipeline()`.
+
+O argumento `states` aceita:
+
+* códigos estaduais em letras minúsculas, como `"rs"` ou
+  `c("pr", "rs", "sc")`;
+* uma região em letras minúsculas: `"norte"`, `"nordeste"`,
+  `"centro-oeste"`, `"sudeste"` ou `"sul"`.
+
+`monthly_data_path`, `municipality_data_path` e `output_dir` são obrigatórios:
+o pacote não assume nenhum caminho padrão. Exemplo para a região Sul:
+
+```{r run-pipeline, eval=FALSE}
+library(extractmeteobr)
+
+pipeline_results <- run_meteo_pipeline(
+  states = "sul",
+  monthly_data_path = here::here(
+    "inst/ext/br-dwgd/update-2026-09-08/monthly"
+  ),
+  municipality_data_path = here::here(
+    "inst/ext/ibge/BR_Municipios_2022/BR_Municipios_2022.shp"
+  ),
+  output_dir = here::here("data/processed")
+)
+```
+
+Para uma execução configurada e reprodutível, salve os caminhos e a chamada de
+`run_meteo_pipeline()` em um script próprio do seu projeto (fora do pacote) e
+execute-o com `source()`. A vinheta
+`vignette("pipeline", package = "extractmeteobr")` mostra esse padrão de uso
+completo, tanto pela função principal, quanto etapa por etapa.
+
+Por padrão, a função retorna uma lista com:
+
+```text
+monthly_files
+municipalities
+filled_monthly_rasters
+municipal_monthly_means
+```
+
+Para retornar somente o tibble final, com as séries das médias espaciais dos municípios, use:
+
+```{r run-pipeline-final-only, eval=FALSE}
+municipal_monthly_means <- run_meteo_pipeline(
+  states = "sul",
+  monthly_data_path = here::here(
+    "inst/ext/br-dwgd/update-2026-09-08/monthly"
+  ),
+  municipality_data_path = here::here(
+    "inst/ext/ibge/BR_Municipios_2022/BR_Municipios_2022.shp"
+  ),
+  output_dir = here::here("data/processed"),
+  return_intermediate = FALSE
+)
+```
+
+O resultado também é gravado em `output_dir`. Quando `states` recebe uma
+região, o nome do arquivo usa essa região:
+
+```text
+municipal-monthly-meteorology-sul.fst
+```
+
+Quando são fornecidos códigos estaduais, o sufixo identifica os estados. Para
+um único estado, por exemplo:
+
+```text
+municipal-monthly-meteorology-rs.fst
+```
+
+Todas as tabelas retornadas são *tibbles*. O produto final contém os atributos
+municipais, a coluna temporal `date` e uma coluna para cada variável.
+
+# Pré-processamento mensal para o Brasil
+
+A agregação dos dados diários em totais mensais é um pré-processamento nacional
+executado uma única vez. Ela não faz parte do pipeline regional.
+
+```{r aggregate-monthly, eval=FALSE}
+monthly_files <- aggregate_daily_netcdfs_by_month(
+  data_path = here::here("inst/ext/br-dwgd/update-2026-09-08"),
+  variables = c("pr", "ETo"),
+  aggregation_functions = list(pr = "sum", ETo = "sum"),
+  overwrite = FALSE
+)
+```
+
+`monthly_files` contém os caminhos dos NetCDFs produzidos ou reutilizados.
+Esses arquivos são as entradas meteorológicas do pipeline regional.
+
+# Pipeline regional
+
+O processamento é realizado para um conjunto de polígonos (ex.: municípios de
+um estado), para os quais se calcula a média espacial de cada variável
+meteorológica. O pipeline executa quatro etapas:
+
+1. carrega os municípios dos estados ou da região solicitada;
+2. recorta os rasters mensais para a extensão desses municípios (não é
+   aplicada máscara: a área do raster fora dos polígonos, mas dentro da
+   extensão recortada, é mantida);
+3. preenche por IDW as células `NA` que interceptam os municípios, somente se necessário, o que evita médias `NA` em municípios pequenos nas bordas do domínio;
+4. calcula as médias ponderadas por área e grava o arquivo `.fst`.
+
+`run_meteo_pipeline()` coordena as quatro etapas. O vignette
+`vignette("pipeline", package = "extractmeteobr")` mostra como executá-las
+separadamente, útil para inspeção ou depuração.
+
+```{r pipeline-diagram, fig.width = 13.5, fig.height = 2.2, echo=FALSE}
+library(DiagrammeR)
+
+grViz(
+  "
+digraph pipeline {
+  rankdir = LR
+  graph [fontname = 'Helvetica']
+  node [shape = box, style = 'rounded,filled', fillcolor = '#EFF3FF',
+        color = '#6BAED6', fontname = 'Helvetica', fontsize = 10]
+  edge [color = '#6BAED6']
+
+  s0 [label = '0. Agregar dados mensais\n(uma vez, Brasil)',
+      fillcolor = '#FDE9D9', color = '#F4A460']
+
+  subgraph cluster_estado {
+    label = 'Por estado'
+    fontname = 'Helvetica'
+    fontsize = 10
+    style = dashed
+    color = '#999999'
+
+    s1 [label = '1. Carregar municípios']
+    s2 [label = '2. Recortar rasters mensais']
+    s3 [label = '3. Preencher células ausentes']
+    s4 [label = '4. Calcular médias municipais']
+
+    s1 -> s2 -> s3 -> s4
+  }
+
+  s0 -> s1
+}
+",
+  width = 1250,
+  height = 220
+)
+```
+
+| Etapa | Arquivo em `R/` | Função principal | Papel no pipeline |
+|---|---|---|---|
+| 0 | `aggregate-monthly.R` | `aggregate_daily_netcdfs_by_month()` | Agrega os NetCDFs diários (`pr`, `ETo`) em `SpatRaster` mensais para todo o Brasil. Pré-processamento único, fora do pipeline regional. |
+| 1 | `geographic-data.R` | `load_ibge_municipalities()` | Carrega os municípios dos estados ou da região solicitada. |
+| 2 | `crop-netcdfs.R` | `crop_netcdfs()` | Recorta os rasters mensais para a extensão desses municípios. |
+| 3 | `fill-missing-raster-cells.R` | `fill_missing_raster_cells()` | Preenche por IDW as células `NA` que interceptam os municípios, somente se necessário. |
+| 4 | `area-weighted-mean.R`, `municipal-output.R` | `extract_area_weighted_mean()`, `join_and_write_municipal_means()` | Calcula as médias ponderadas por área e grava o arquivo `.fst`. |
+| — | `run-pipeline.R` | `run_meteo_pipeline()` | Orquestra as etapas 1 a 4 para um conjunto de estados ou uma região. |
+| — | `interactive-maps.R` | `make_interactive_spatial_map()` | Mapa interativo opcional (requer o pacote `tmap`) para inspecionar polígonos e rasters. |
+
+## Funções principais e auxiliares
+
+As auxiliares são chamadas internamente. Elas não representam novas etapas nem
+precisam ser executadas diretamente no uso normal do pacote.
+
+```{r function-mapping-diagram, fig.width = 8, fig.height = 10, echo=FALSE, fig.align='center'}
+library(DiagrammeR)
+
+grViz(
+  "
+digraph function_mapping {
+  rankdir = LR
+  graph [fontname = 'Helvetica', ranksep = 0.7, nodesep = 0.35]
+  node [shape = box, style = 'rounded,filled', fillcolor = '#EFF3FF',
+        color = '#6BAED6', fontname = 'Helvetica', fontsize = 12]
+  edge [color = '#6BAED6']
+
+  subgraph cluster_4 {
+    label = 'Médias espaciais e saída'
+    color = '#FC9272'
+    e [label = 'extract_area_weighted_mean()', fillcolor = '#FEE0D2']
+    e1 [label = 'make_polygon_cell_weights()']
+    e2 [label = 'calculate_area_weighted_mean()']
+    f [label = 'join_and_write_municipal_means()', fillcolor = '#FEE0D2']
+    e -> e1
+    e -> e2
+    e -> f [style = dashed]
+  }
+  
+  subgraph cluster_3 {
+    label = 'Preenchimento condicional'
+    color = '#BCBDDC'
+    d [label = 'fill_missing_raster_cells()', fillcolor = '#F2F0F7']
+    d1 [label = 'make_idw_weights()']
+    d -> d1
+  }
+  
+  subgraph cluster_2 {
+    label = 'Recorte espacial'
+    color = '#9ECAE1'
+    c [label = 'crop_netcdfs()', fillcolor = '#DEEBF7']
+    c1 [label = 'validate_crop_polygons()']
+    c2 [label = 'crop_netcdfs_by_prefix()']
+    c3 [label = 'crop_netcdf()']
+    c -> c1
+    c -> c2 -> c3
+  }
+  
+  subgraph cluster_1 {
+    label = 'Carregamento geográfico'
+    color = '#A1D99B'
+    b [label = 'load_ibge_municipalities()', fillcolor = '#E5F5E0']
+    b1 [label = 'load_polygon_data()']
+    b -> b1
+  }
+  
+  subgraph cluster_0 {
+    label = 'Agregação mensal'
+    color = '#F4A460'
+    a [label = 'aggregate_daily_netcdfs_by_month()', fillcolor = '#FDE9D9']
+    a1 [label = 'aggregate_daily_netcdf_by_month()']
+    a -> a1
+  }
+  
+}
+",
+  width = 600,
+  height = 700
+)
+```
+
+# Referência das funções
+
+## Execução completa: `run_meteo_pipeline()`
+
+Executa o pipeline regional completo. A função resolve os estados associados a
+uma região, carrega os municípios, recorta os NetCDFs mensais, preenche células
+ausentes quando necessário, calcula as médias e grava o produto municipal.
+
+Seus principais argumentos são:
+
+* `states`: estados ou região, sempre em letras minúsculas;
+* `monthly_data_path`: diretório dos NetCDFs mensais (obrigatório);
+* `municipality_data_path`: caminho da malha municipal do IBGE (obrigatório);
+* `output_dir`: diretório do arquivo final (obrigatório);
+* `variables`: variáveis raster, com `c("pr", "ETo")` como padrão;
+* `target_crs`: CRS comum a polígonos e rasters; se `NULL` (padrão), é
+  inferido do primeiro NetCDF mensal;
+* `file_stem`: prefixo do nome do arquivo de saída, antes do sufixo de
+  estado ou região;
+* `return_intermediate`: inclui ou omite os resultados intermediários.
+
+Na chamada interna de `fill_missing_raster_cells()`, a janela e a potência são
+explicitadas como `window_size = 5L` e `power = 2`.
+
+## Agregação mensal
+
+### `aggregate_daily_netcdfs_by_month()`
+
+Localiza e processa os NetCDFs diários de cada variável. Para cada arquivo,
+chama `aggregate_daily_netcdf_by_month()` e retorna o caminho do NetCDF mensal.
+A lista `aggregation_functions` associa explicitamente cada variável à função
+de agregação aplicada.
+
+### `aggregate_daily_netcdf_by_month()`
+
+Agrega um NetCDF diário por mês. As datas devem ser válidas, únicas e
+consecutivas. Nas somas, reaplica a máscara da primeira camada para evitar que
+células externas ao domínio, formadas somente por `NA`, virem zero.
+
+## Dados geográficos
+
+### `load_polygon_data()`
+
+Lê um arquivo vetorial, filtra feições quando solicitado, valida identificadores
+e geometrias, corrige geometrias inválidas e transforma o CRS opcionalmente. O
+identificador original é copiado para `polygon_id`. Identificadores ausentes ou
+duplicados, geometrias vazias e arquivos sem CRS produzem erro.
+
+```{r load-polygons, eval=FALSE}
+polygons <- load_polygon_data(
+  data_path = "path/to/polygons.gpkg",
+  id_column = "polygon_code",
+  target_crs = 4326,
+  filter_column = "region",
+  filter_values = "south"
+)
+```
+
+### `load_ibge_municipalities()`
+
+Adapta `load_polygon_data()` à malha municipal do IBGE. Retorna um objeto `sf`
+com `polygon_id`, `municipality`, `state` e geometria. `states` aceita códigos
+estaduais ou uma região, sempre em letras minúsculas. `data_path` é
+obrigatório (sem valor padrão). A função também oferece a regra específica
+para remoção de Lagoa Mirim e Lagoa dos Patos.
+
+```{r load-municipalities, eval=FALSE}
+reference_crs <- fs::dir_ls(
+  here::here("inst/ext/br-dwgd/update-2026-09-08/monthly"),
+  glob = "*.nc"
+)[[1]] |>
+  terra::rast() |>
+  terra::crs()
+
+municipalities <- load_ibge_municipalities(
+  states = "rs",
+  data_path = here::here(
+    "inst/ext/ibge/BR_Municipios_2022/BR_Municipios_2022.shp"
+  ),
+  target_crs = reference_crs,
+  remove_lagoons = FALSE
+)
+```
+
+### `load_ibge_states()`
+
+`load_ibge_states()` carrega os estados solicitados e pode mantê-los separados
+ou uni-los sem descartar ilhas e outros componentes válidos. `data_path`
+também é obrigatório nessa função.
+
+## Recorte: `crop_netcdfs()`
+
+Lê os NetCDFs associados a cada prefixo e recorta os rasters para a extensão
+retangular dos polígonos. Aceita eixos temporais regulares ou irregulares, desde
+que rasters e polígonos tenham o mesmo CRS.
+
+```{r crop-netcdfs, eval=FALSE}
+monthly_rasters <- crop_netcdfs(
+  data_path = here::here(
+    "inst/ext/br-dwgd/update-2026-09-08/monthly"
+  ),
+  polygons = municipalities,
+  file_prefixes = c(pr = "pr_mly_", ETo = "ETo_mly_")
+)
+```
+
+Os nomes de `file_prefixes` tornam-se os nomes da lista retornada. Os tempos
+são lidos dos NetCDFs e preservam sua classe original. Os arquivos são
+ordenados pelo primeiro instante; o eixo combinado deve ser único e
+estritamente crescente, mas não precisa ter intervalo regular.
+
+O recorte usa `snap = "out"` e não aplica máscara. Células fora dos polígonos,
+mas dentro do retângulo recortado, são mantidas porque podem fornecer vizinhos
+para a interpolação nas bordas.
+
+## Preenchimento: `fill_missing_raster_cells()`
+
+Verifica se existem células `NA` interceptadas pelos polígonos. O diagnóstico
+usa a primeira camada do primeiro raster e pressupõe a mesma máscara espacial
+para todas as variáveis e datas.
+
+```{r fill-missing-cells, eval=FALSE}
+filled_monthly_rasters <- fill_missing_raster_cells(
+  rasters = monthly_rasters,
+  polygons = municipalities
+)
+```
+
+Se não houver células ausentes, retorna a lista original. Caso contrário,
+aplica interpolação focal IDW a todos os rasters. Somente células originalmente
+ausentes são modificadas. Para distância \(d_i\), o peso é
+
+$$
+w_i = \frac{1}{d_i^p}.
+$$
+
+`power` define $p$, com padrão 2. `window_size` define a janela quadrada, com
+padrão 5, e deve ser ímpar e igual ou superior a 3. A função `terra::focal()`, por trás da `fill_missing_raster_cells()`  usa
+`na.policy = "only"` e `na.rm = TRUE`; portanto, preserva valores observados,
+inclusive zeros. Sem vizinhos válidos, a célula continua `NA`.
+
+## Médias ponderadas: `extract_area_weighted_mean()`
+
+Calcula a média de cada raster sobre cada polígono. Os pesos de interseção são
+calculados uma vez e reutilizados em todas as variáveis e datas.
+
+```{r extract-means, eval=FALSE}
+area_weighted_means <- extract_area_weighted_mean(
+  rasters = filled_monthly_rasters,
+  polygons = municipalities
+)
+```
+
+A função retorna um tibble amplo com `polygon_id`, `date` e uma coluna por
+variável. Para o valor $x_{i,t}$ da célula $i$ na data $t$, a média do
+polígono $j$ é
+
+$$
+\bar{x}_{j,t} =
+\frac{\sum_i I_{i,t} x_{i,t} f_{i,j} A_i}
+     {\sum_i I_{i,t} f_{i,j} A_i},
+$$
+
+em que $(f_{i,j}$ é a fração da célula no polígono, $A_i$ é a área física da
+célula e $I_{i,t}$ vale 1 para dados disponíveis e 0 para `NA`. Zeros
+participam do cálculo; valores `NA` são excluídos do numerador e denominador.
+
+## Saída municipal: `join_and_write_municipal_means()`
+
+Associa os atributos municipais ao resultado genérico e grava o tibble em
+`.fst`. Essa função específica fica em `R/municipal-output.R`. Em execuções
+regionais, usa o nome da região no arquivo; nas demais, usa os códigos
+estaduais. `output_dir` é obrigatório (sem valor padrão), e o diretório é
+criado quando ainda não existe.
+
+```{r join-and-write, eval=FALSE}
+municipal_monthly_means <- join_and_write_municipal_means(
+  means = area_weighted_means,
+  polygons = municipalities,
+  output_dir = here::here("data/processed")
+)
+```
+
+## Visualização: `make_interactive_spatial_map()`
+
+Cria um mapa `tmap` com os polígonos e um ponto clicável por feição. Pode incluir
+um raster com rótulo, unidade e data. A função retorna o mapa sem imprimi-lo e
+não participa do pipeline principal. `popup_vars` define os campos exibidos e
+`popup_title` define o título do popup e o texto mostrado ao passar o cursor.
+
+# Validação dos cálculos espaciais
+
+O projeto combina testes sintéticos automatizados com validações que dependem dos dados reais.
+
+## Testes automatizados
+
+`tests/testthat/test-area-weighted-mean.R` verifica o cálculo explícito e
+matricial, interseções parciais, `NA`, zeros observados, camadas ausentes,
+polígonos pequenos nas bordas e o resultado de
+`extract_area_weighted_mean()`.
+
+```{r test-project, eval=FALSE}
+devtools::test()
+```
+
+## Validação da média com dados reais
+
+Os scripts abaixo comparam a implementação com uma média calculada
+explicitamente para uma variável, um município e um mês:
+
+```text
+inst/validation/
+├── validate-area-weighted-mean-real-data.R
+└── run-area-weighted-mean-real-data.R
+```
+
+Esses scripts ficam fora da árvore instalável do pacote (`.Rbuildignore`) e
+usam funções internas não exportadas; execute-os após `devtools::load_all()`,
+não apenas `library(extractmeteobr)`.
+
+A validação retorna `validation$summary`, com as diferenças e o resultado
+`validation_passed`, e `validation$cells`, com as contribuições de cada célula.
+
+Para cada célula \(i\) interceptada pelo município, o peso é calculado
+explicitamente, de forma independente da função em avaliação, como
+
+$$
+w_i = f_i A_i,
+$$
+
+em que \(f_i\) é a fração da célula contida no município e \(A_i\) é sua área
+física. A média de referência é:
+
+$$
+\bar{x} = \frac{\sum_{i \in V} x_i f_i A_i}
+     {\sum_{i \in V} f_i A_i},
+$$
+
+sendo \(V\) o conjunto de células com valores válidos. O resultado explícito é
+comparado com:
+
+1. `calculate_area_weighted_mean()` (interna), baseada em matriz esparsa;
+2. `extract_area_weighted_mean()`, responsável pela integração de múltiplas
+   variáveis.
+
+`validation$cells` permite auditar, célula por célula:
+
+* valor meteorológico;
+* fração interceptada;
+* área física;
+* peso espacial;
+* disponibilidade do dado;
+* contribuição para o numerador.
+
+A validação é considerada aprovada quando `validation_passed` é `TRUE`,
+considerando a tolerância numérica definida.
+
+## Consistência regional
+
+Verifica se um estado processado isoladamente produz os mesmos resultados
+quando integra uma execução regional. O caso de referência compara o Rio Grande
+do Sul isolado com o subconjunto gaúcho do resultado da região Sul. É
+necessário executar `run_meteo_pipeline()` duas vezes com o mesmo
+`file_stem`, uma para `states = "sul"` e outra para `states = "rs"`.
+
+```text
+inst/validation/
+├── validate-regional-consistency.R
+└── run-regional-consistency.R
+```
+
+```{r regional-consistency, eval=FALSE}
+source(here::here("inst/validation/run-regional-consistency.R"))
+```
+
+`validate_regional_consistency()` procura chaves `polygon_id` e `date`
+duplicadas, registros exclusivos, diferenças na posição de `NA` e diferenças
+numéricas em `pr` e `ETo`. A diferença escalonada é
+
+$$
+d = \frac{|x_{\mathrm{regional}} - x_{\mathrm{estadual}}|}
+{\max\left(|x_{\mathrm{regional}}|,
+           |x_{\mathrm{estadual}}|, 1\right)}.
+$$
+
+Os valores são equivalentes quando \(d \leq 10^{-12}\). Chaves ausentes,
+duplicações ou diferenças na posição de `NA` reprovam a validação. O resultado
+contém quatro tibbles:
+
+```r
+regional_consistency$summary
+regional_consistency$variable_summary
+regional_consistency$key_mismatches
+regional_consistency$value_mismatches
+```
+
+O teste passa quando `regional_consistency$summary$validation_passed` é
+`TRUE`. Diferentemente da validação da média (que usa funções internas), esta
+função não depende de nenhuma função do pacote — apenas de `dplyr`, `purrr` e
+`tibble` — e pode ser executada com apenas `source()`.
+
+## Distinção entre teste e validação
+
+Os testes sintéticos são rápidos, autocontidos e executados automaticamente
+por `devtools::test()`. As validações com dados reais ficam em
+`inst/validation/` e não integram a suíte automática porque dependem de
+arquivos externos do BR-DWGD e do IBGE, ou de resultados previamente
+processados pelo pipeline.

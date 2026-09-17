@@ -1,0 +1,4 @@
+interface:
+  display_name: "Documentar interfaces e métodos"
+  short_description: "Roxygen2 e docstrings fiéis ao método científico"
+  default_prompt: "Use $doc para documentar a interface e o método implementado com exemplos reproduzíveis."

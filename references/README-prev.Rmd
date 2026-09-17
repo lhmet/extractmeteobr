@@ -1,0 +1,725 @@
+---
+output: github_document
+editor_options: 
+  chunk_output_type: console
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+
+```
+
+# extract-meteo-br
+
+<!-- badges: start -->
+
+<!-- badges: end -->
+
+
+O **extract-meteo-br** é um projeto em R destinado a transformar dados
+meteorológicos gradeados do Brasil em séries temporais regionais calculadas
+sobre polígonos.
+
+O caso de uso atual consiste em obter precipitação e
+evapotranspiração de referência mensais do BR-DWGD para os municípios do Rio
+Grande do Sul, com aplicação posterior no cálculo e na calibração de índices
+regionais de seca.
+
+
+
+
+# Organização de dados
+
+## Dados brutos
+
+### Dados geográficos
+
+Estão disponíveis no diretório `./inst/ext/ibge` a malha municipal do IBGE e os estados do Brasil.
+
+```{r}
+fs::dir_tree(here::here("inst/ext/ibge"))
+```
+
+### Dados meteorológicos
+
+Estão disponíveis no diretório `./inst/ext/br-dwg` os dados meteorológicos diários gradeados para o Brasil.
+
+```{r}
+fs::dir_tree(here::here("inst/ext/br-dwgd"), type = "file")
+```
+
+# Processamento de dados
+
+O processamento é realizado para um conjunto de polígonos, como municípios,
+bacias hidrográficas ou glebas, para os quais se calcula a média espacial de
+cada variável meteorológica.
+
+
+A etapa inicial consiste em agregar os dados meteorológicos na escala mensal
+em um `SpatRaster`. Esse pré-processamento é executado uma única vez para todo
+o Brasil.
+
+
+```{r aggregate-monthly, eval=FALSE}
+monthly_files <- aggregate_daily_netcdfs_by_month(
+  variables = c("pr", "ETo"),
+  overwrite = FALSE,
+  data_path = here::here("inst/ext/br-dwgd/update-2026-09-08"),
+  aggregation_functions = list(pr = "sum", ETo = "sum")
+)
+
+```
+
+
+Com os dados mensais das variáveis meteorológicas a seguinte sequência de processamento é realizada.
+
+1.  carregar polígonos de uma região (ex: polígonos de municípios de um estado do Brasil, polígonos de bacias hidrográficas do Sul do Brasil, polígonos de glebas de um estado, etc)
+
+2.  Recortar o `SpatRaster` dos dados meteorológicos para a extensão espacial
+    dos polígonos. Não é aplicada máscara: as células situadas fora dos
+    polígonos, mas dentro da extensão retangular recortada, são mantidas.
+
+3.  Verificar, na primeira camada do primeiro raster, quantas células `NA`
+    interceptam os polígonos. Se houver pelo menos uma, preencher as células
+    ausentes de todos os rasters por interpolação focal IDW; caso contrário,
+    preservar os rasters sem processamento.
+
+4.  Com os `SpatRaster` preenchidos nas bordas, calcular a média espacial de
+    cada variável nos municípios, ponderada pela área que cada célula ocupa
+    dentro do respectivo polígono. O cálculo genérico retorna um tibble; uma
+    função específica para municípios associa os atributos municipais e grava
+    o resultado em um arquivo `.fst` cujo nome inclui a identificação do estado.
+
+
+## Pipe de processamento
+
+As funções reutilizáveis ficam em `R/`. Os scripts executores ficam em
+`scripts/` e, quando numerados, são executados em sequência:
+
+```{r pipeline-diagram, fig.width = 13.5, fig.height = 2.2, echo=FALSE}
+library(DiagrammeR)
+
+grViz(
+  "
+digraph pipeline {
+  rankdir = LR
+  graph [fontname = 'Helvetica']
+  node [shape = box, style = 'rounded,filled', fillcolor = '#EFF3FF',
+        color = '#6BAED6', fontname = 'Helvetica', fontsize = 10]
+  edge [color = '#6BAED6']
+
+  s0 [label = '0. Agregar dados mensais\n(uma vez, Brasil)',
+      fillcolor = '#FDE9D9', color = '#F4A460']
+
+  subgraph cluster_estado {
+    label = 'Por estado'
+    fontname = 'Helvetica'
+    fontsize = 10
+    style = dashed
+    color = '#999999'
+
+    s1 [label = '1. Carregar municípios']
+    s2 [label = '2. Recortar rasters mensais']
+    s3 [label = '3. Preencher células ausentes']
+    s4 [label = '4. Calcular médias municipais']
+
+    s1 -> s2 -> s3 -> s4
+  }
+
+  s0 -> s1
+}
+",
+  width = 1250,
+  height = 220
+)
+```
+
+| Etapa | Script executor | Arquivo(s) de funções | Função principal | Papel no pipe |
+|---|---|---|---|---|
+| 0 | `scripts/00-aggregate-monthly.R` | `R/00-aggregate-monthly.R` | `aggregate_daily_netcdfs_by_month()` | Gera os NetCDFs mensais nacionais a partir dos dados diários. |
+| 1 | `scripts/01-load-ibge-municipalities.R` | `R/geographic-data.R` | `load_ibge_municipalities()` | Carrega, padroniza e reprojeta os municípios selecionados. |
+| 2 | `scripts/02-crop-monthly-netcdfs.R` | `R/crop-netcdfs.R` | `crop_netcdfs()` | Recorta os NetCDFs mensais à extensão dos municípios. |
+| 3 | `scripts/03-fill-missing-raster-cells.R` | `R/fill-missing-raster-cells.R` | `fill_missing_raster_cells()` | Preenche células `NA` por IDW somente quando necessário. |
+| 4 | `scripts/04-calculate-area-weighted-means.R` | `R/area-weighted-mean.R` e `R/municipal-output.R` | `extract_area_weighted_mean()` | Calcula as médias municipais e grava o `.fst` identificado pela UF. |
+
+
+### Mapeamento das funções principais e subfunções
+
+O diagrama a seguir mostra a decomposição interna das funções principais. As
+funções auxiliares são chamadas durante o processamento e não constituem
+etapas independentes do pipe.
+
+
+
+```{r function-mapping-diagram, fig.width = 8, fig.height = 10, echo=FALSE}
+library(DiagrammeR)
+
+grViz(
+  "
+digraph function_mapping {
+  rankdir = LR
+  graph [fontname = 'Helvetica', ranksep = 0.7, nodesep = 0.35]
+  node [shape = box, style = 'rounded,filled', fillcolor = '#EFF3FF',
+        color = '#6BAED6', fontname = 'Helvetica', fontsize = 12]
+  edge [color = '#6BAED6']
+
+  subgraph cluster_4 {
+    label = 'Médias espaciais e saída'
+    color = '#FC9272'
+    e [label = 'extract_area_weighted_mean()', fillcolor = '#FEE0D2']
+    e1 [label = 'make_polygon_cell_weights()']
+    e2 [label = 'calculate_area_weighted_mean()']
+    f [label = 'join_and_write_municipal_means()', fillcolor = '#FEE0D2']
+    e -> e1
+    e -> e2
+    e -> f [style = dashed]
+  }
+  
+  subgraph cluster_3 {
+    label = 'Preenchimento condicional'
+    color = '#BCBDDC'
+    d [label = 'fill_missing_raster_cells()', fillcolor = '#F2F0F7']
+    d1 [label = 'make_idw_weights()']
+    d -> d1
+  }
+  
+  subgraph cluster_2 {
+    label = 'Recorte espacial'
+    color = '#9ECAE1'
+    c [label = 'crop_netcdfs()', fillcolor = '#DEEBF7']
+    c1 [label = 'validate_crop_polygons()']
+    c2 [label = 'crop_netcdfs_by_prefix()']
+    c3 [label = 'crop_netcdf()']
+    c -> c1
+    c -> c2 -> c3
+  }
+  
+  subgraph cluster_1 {
+    label = 'Carregamento geográfico'
+    color = '#A1D99B'
+    b [label = 'load_ibge_municipalities()', fillcolor = '#E5F5E0']
+    b1 [label = 'load_polygon_data()']
+    b -> b1
+  }
+  
+  subgraph cluster_0 {
+    label = 'Agregação mensal'
+    color = '#F4A460'
+    a [label = 'aggregate_daily_netcdfs_by_month()', fillcolor = '#FDE9D9']
+    a1 [label = 'aggregate_daily_netcdf_by_month()']
+    a -> a1
+  }
+  
+}
+",
+  width = 500,
+  height = 500
+)
+```
+
+<!-- ### Interpolação condicional de células ausentes -->
+
+<!-- Depois de executar as etapas 1 e 2, rode: -->
+
+<!-- ```{r fill-missing-cells, eval=FALSE} -->
+<!-- source(here::here("scripts/03-fill-missing-raster-cells.R")) -->
+<!-- ``` -->
+
+<!-- O script mede o tempo total com `tictoc` e cria `filled_monthly_rasters`. Durante -->
+<!-- a execução, uma mensagem informa o número de células `NA` e o total de células -->
+<!-- únicas no domínio dos polígonos. Quando a contagem de `NA` é zero, -->
+<!-- `filled_monthly_rasters` recebe os próprios `monthly_rasters`, sem executar -->
+<!-- `terra::focal()`. -->
+
+
+
+## Validação dos cálculos espaciais
+
+Os cálculos espaciais e a estabilidade dos resultados do pipeline são
+verificados por três procedimentos complementares.
+
+### Testes automatizados com dados sintéticos
+
+O arquivo `tests/testthat/test-area-weighted-mean.R` utiliza uma grade sintética e polígonos controlados para verificar:
+
+* concordância entre o cálculo explícito e a implementação por matriz esparsa;
+* células parcialmente interceptadas;
+* exclusão de células com `NA` do numerador e do denominador;
+* distinção entre valores ausentes e zeros observados;
+* camada inteiramente ausente;
+* polígono pequeno na borda da grade;
+* preservação dos resultados por `extract_area_weighted_mean()`.
+
+Os testes podem ser executados com:
+
+```r
+testthat::test_file(
+  "tests/testthat/test-area-weighted-mean.R"
+)
+```
+
+Ou, juntamente com todos os testes do projeto:
+
+```r
+devtools::test()
+```
+
+### Validação da média ponderada com dados reais
+
+O diretório `inst/validation/` contém uma validação independente da média
+ponderada por área com dados reais do BR-DWGD e polígonos municipais do IBGE:
+
+```text
+inst/validation/
+├── validate-area-weighted-mean-real-data.R
+└── run-area-weighted-mean-real-data.R
+```
+
+O primeiro arquivo define `validate_area_weighted_mean_real_data()`. O segundo
+seleciona uma variável, um município e um mês e executa a validação.
+
+Para cada célula \(i\) interceptada pelo município, o peso é calculado
+explicitamente como
+
+$$
+w_i = f_i A_i,
+$$
+
+em que \(f_i\) é a fração da célula contida no município e \(A_i\) é sua área
+física. A média de referência é
+
+$$
+\bar{x} = \frac{\sum_{i \in V} x_i f_i A_i}
+     {\sum_{i \in V} f_i A_i},
+$$
+
+sendo \(V\) o conjunto de células com valores válidos.
+
+O resultado explícito é comparado com a implementação matricial e com
+`extract_area_weighted_mean()`. A validação retorna:
+
+```r
+validation$summary
+validation$cells
+```
+
+`validation$summary` reúne as médias calculadas, as diferenças absoluta e
+relativa, a cobertura espacial válida e o resultado da comparação numérica.
+`validation$cells` permite auditar, célula por célula, o valor meteorológico, a
+fração interceptada, a área física, o peso espacial, a disponibilidade do dado
+e a contribuição para o numerador. A validação é aprovada quando
+`validation_passed` é `TRUE` para a tolerância definida.
+
+### Consistência regional do pipeline
+
+O teste de consistência regional verifica se os resultados de um estado
+processado isoladamente são reproduzidos quando o mesmo estado integra uma
+execução regional. Essa comparação avalia a estabilidade espacial do pipeline
+diante da mudança do domínio de processamento, incluindo recorte,
+preenchimento de células ausentes e cálculo das médias municipais.
+
+O caso de referência compara o Rio Grande do Sul processado isoladamente com
+o subconjunto do estado extraído do resultado da região Sul:
+
+```text
+inst/validation/
+├── validate-regional-consistency.R
+└── run-regional-consistency.R
+```
+
+Para executar a validação:
+
+```{r regional-consistency, eval=FALSE}
+source(here::here("inst/validation/run-regional-consistency.R"))
+```
+
+`validate_regional_consistency()` verifica:
+
+* duplicações da chave formada por `polygon_id` e `date`;
+* registros presentes em apenas um dos resultados;
+* divergências no padrão de valores `NA`;
+* diferenças numéricas em `pr` e `ETo`.
+
+Para cada par de valores, a diferença numérica escalonada é
+
+$$
+d = \frac{|x_{\mathrm{regional}} - x_{\mathrm{estadual}}|}
+{\max\left(|x_{\mathrm{regional}}|,
+           |x_{\mathrm{estadual}}|, 1\right)}.
+$$
+
+Os valores são considerados equivalentes quando \(d \leq 10^{-12}\). Essa
+tolerância admite apenas diferenças residuais decorrentes da aritmética de
+ponto flutuante; chaves ausentes, chaves duplicadas ou divergências na posição
+dos valores `NA` reprovam a validação.
+
+O resultado é uma lista cujos quatro componentes tabulares são tibbles:
+
+```r
+regional_consistency$summary
+regional_consistency$variable_summary
+regional_consistency$key_mismatches
+regional_consistency$value_mismatches
+```
+
+`summary` apresenta o número de linhas, chaves duplicadas e divergências entre
+os resultados. `variable_summary` resume as diferenças por variável, enquanto
+`key_mismatches` e `value_mismatches` permitem inspecionar as inconsistências.
+O teste é aprovado quando
+`regional_consistency$summary$validation_passed` é `TRUE`.
+
+### Distinção entre teste e validação
+
+Os testes sintéticos são rápidos, autocontidos e executados automaticamente.
+As validações com dados reais e de consistência regional dependem dos arquivos
+externos do BR-DWGD, da malha do IBGE e de resultados previamente produzidos;
+por isso, ficam em `inst/validation/` e não integram a execução automática de
+`devtools::test()`.
+
+
+
+# Interfaces públicas do projeto
+
+Neste projeto, **API** designa a interface pública oferecida aos demais scripts
+e às pessoas que utilizam o projeto. A API de uma função é definida por seu
+nome, argumentos, valores padrão, objeto retornado, validações, mensagens e
+efeitos observáveis. Detalhes auxiliares que podem mudar sem afetar o uso
+externo não pertencem à API pública.
+
+As interfaces são organizadas por responsabilidade. Essa separação evita que
+regras específicas dos municípios ou do IBGE sejam incorporadas às operações
+geoespaciais genéricas.
+
+## API de agregação mensal
+
+### `aggregate_daily_netcdfs_by_month()`
+
+Processa em lote os arquivos NetCDF diários das variáveis solicitadas. Para
+cada variável, localiza os arquivos correspondentes e chama
+`aggregate_daily_netcdf_by_month()`.
+
+```{r, eval=FALSE}
+monthly_files <- aggregate_daily_netcdfs_by_month(
+  variables = c("pr", "ETo"),
+  aggregation_functions = list(
+    pr = "sum",
+    ETo = "sum"
+  ),
+  data_path = here::here("inst/ext/br-dwgd/update-2026-09-08"),
+  overwrite = FALSE
+)
+```
+
+A função retorna os caminhos dos NetCDFs mensais. A associação explícita entre
+variáveis e funções de agregação documenta que `pr` e `ETo` representam totais
+mensais neste processamento.
+
+### `aggregate_daily_netcdf_by_month()`
+
+Agrega um único NetCDF diário por mês. As datas devem ser válidas, únicas e
+separadas por intervalos consecutivos de um dia. Nas agregações por soma, a
+máscara espacial da primeira camada diária é reaplicada para impedir que
+células externas ao domínio, compostas somente por `NA`, sejam convertidas em
+zeros por `sum(..., na.rm = TRUE)`.
+
+```{r, eval=FALSE}
+monthly_file <- aggregate_daily_netcdf_by_month(
+  data_file = "path/to/pr_19610101_19801231_BR-DWGD.nc",
+  aggregation_function = "sum",
+  overwrite = TRUE
+)
+```
+
+## API geoespacial genérica
+
+### `load_polygon_data()`
+
+Lê e padroniza qualquer conjunto de polígonos, como municípios, bacias
+hidrográficas ou glebas. A função valida identificadores, filtros, tipos
+geométricos, geometrias vazias e CRS, corrige geometrias inválidas e realiza a
+transformação opcional de CRS. O identificador é disponibilizado na coluna
+padronizada `polygon_id`.
+
+```{r, eval=FALSE}
+polygons <- load_polygon_data(
+  data_path = "path/to/polygons.gpkg",
+  id_column = "polygon_code",
+  target_crs = 4326,
+  filter_column = "region",
+  filter_values = "south"
+)
+```
+
+### `select_largest_polygon()`
+
+Separa geometrias `MULTIPOLYGON` em componentes e retorna o polígono de maior
+área. A área é calculada de acordo com o CRS geográfico ou projetado do objeto.
+
+## API específica para dados do IBGE
+
+### `load_ibge_municipalities()`
+
+Adapta `load_polygon_data()` à estrutura da malha municipal do IBGE. Padroniza
+o resultado nas colunas `polygon_id`, `municipality`, `state` e geometria, além
+de oferecer a regra específica para remoção de Lagoa Mirim e Lagoa dos Patos.
+
+```{r, eval=FALSE}
+municipalities <- load_ibge_municipalities(
+  states = "RS",
+  target_crs = reference_crs,
+  remove_lagoons = FALSE
+)
+```
+
+### `load_ibge_states()`
+
+Carrega as unidades da Federação solicitadas e permite mantê-las separadas ou
+uni-las em uma única feição, sem descartar ilhas ou outros componentes
+poligonais válidos.
+
+```{r, eval=FALSE}
+southern_states <- load_ibge_states(
+  states = c("RS", "SC", "PR"),
+  target_crs = reference_crs,
+  union_states = TRUE
+)
+```
+
+## API de recorte de NetCDFs
+
+### `crop_netcdfs()`
+
+Carrega NetCDFs com dimensão temporal e os recorta para a extensão retangular
+de um conjunto genérico de polígonos. A função aceita dados diários, mensais,
+subdiários ou temporalmente irregulares e polígonos como municípios, bacias ou
+glebas, desde que estejam no mesmo CRS dos rasters.
+
+```{r, eval=FALSE}
+monthly_rasters <- crop_netcdfs(
+  data_path = here::here(
+    "inst/ext/br-dwgd/update-2026-09-08/monthly"
+  ),
+  polygons = municipalities,
+  file_prefixes = c(
+    pr = "pr_mly_",
+    ETo = "ETo_mly_"
+  )
+)
+```
+
+`file_prefixes` associa os nomes da lista retornada aos prefixos literais usados
+para selecionar os arquivos. Os tempos são lidos da dimensão temporal dos
+próprios NetCDFs, e não inferidos dos nomes dos arquivos. Depois de ordenar os
+arquivos pelo primeiro instante, a função verifica se o eixo temporal combinado
+é único e estritamente crescente, sem exigir frequência regular. O CRS de cada
+raster é validado antes do recorte, e `terra::rast()` realiza diretamente a
+concatenação.
+
+O recorte usa `snap = "out"` e não aplica máscara. Assim, preserva todas as
+células da grade tocadas pela extensão dos polígonos, inclusive células dentro
+do retângulo de recorte que estejam fora dos polígonos. Esse comportamento é
+intencional, pois essas células são necessárias na etapa posterior de expansão
+dos dados nas bordas.
+
+## API de preenchimento de células ausentes
+
+### `fill_missing_raster_cells()`
+
+Verifica se há células `NA` no domínio espacial dos polígonos e executa a
+interpolação somente quando ela é necessária. O teste utiliza exclusivamente a
+primeira camada do primeiro `SpatRaster` da lista, assumindo que todas as
+variáveis e camadas temporais compartilham a mesma máscara espacial de valores
+ausentes.
+
+```{r, eval=FALSE}
+filled_monthly_rasters <- fill_missing_raster_cells(
+  rasters = monthly_rasters,
+  polygons = municipalities
+)
+```
+
+A função identifica as células únicas interceptadas pelos polígonos com
+`terra::cells(..., touches = TRUE)` e informa quantas delas contêm `NA`. Se a
+contagem for zero, a lista original é retornada imediatamente, sem interpolação.
+Se houver pelo menos uma célula ausente, todos os rasters são processados com
+`purrr::map()`.
+
+O preenchimento usa uma média móvel ponderada pelo inverso da distância. Para
+uma célula vizinha situada à distância $d_i$ do centro, o peso é
+
+$$
+w_i = \frac{1}{d_i^p},
+$$
+
+em que $p$ é definido por `power`, cujo valor padrão é 2. A janela focal
+quadrada é definida por `window_size`, com valor padrão igual a 5. Seu tamanho
+deve ser ímpar e igual ou superior a 3.
+
+A célula central recebe peso zero. `terra::focal()` é executada com
+`na.policy = "only"` e `na.rm = TRUE`; portanto, somente células originalmente
+ausentes são modificadas, os vizinhos ausentes são ignorados e os valores
+observados permanecem inalterados. Se não houver vizinhos válidos dentro da
+janela, a célula continua como `NA`.
+
+## API de visualização interativa
+
+### `make_interactive_spatial_map()`
+
+Cria um mapa interativo em modo `view` do `tmap`. A função sempre exibe os
+limites dos polígonos e cria um ponto interno clicável para cada feição. Os
+campos apresentados no popup são definidos por `popup_vars`, enquanto
+`popup_title` define o título do popup e o texto exibido ao passar o cursor
+sobre o ponto.
+
+Os scripts executores carregam a função explicitamente, pois o projeto ainda
+não está estruturado como pacote:
+
+```{r, eval=FALSE}
+source(here::here("R/interactive-maps.R"))
+```
+
+Para visualizar somente os municípios:
+
+```{r, eval=FALSE}
+municipality_map <- make_interactive_spatial_map(
+  polygons = municipalities,
+  popup_vars = c(
+    "Município" = "municipality",
+    "UF" = "state"
+  ),
+  popup_title = "municipality"
+)
+
+print(municipality_map)
+```
+
+Um `SpatRaster` de uma única camada pode ser incluído abaixo dos polígonos.
+Nesse caso, `raster_label` identifica a variável e `raster_units` informa a
+unidade na legenda. Quando a camada possui coordenada temporal, seu instante é
+acrescentado automaticamente ao título do mapa.
+
+```{r, eval=FALSE}
+precipitation_map <- make_interactive_spatial_map(
+  polygons = municipalities,
+  popup_vars = c(
+    "Município" = "municipality",
+    "UF" = "state"
+  ),
+  popup_title = "municipality",
+  raster = monthly_rasters[["pr"]][[1]],
+  raster_label = "Precipitação mensal",
+  raster_units = "mm"
+)
+
+print(precipitation_map)
+```
+
+A função retorna o objeto `tmap` sem imprimi-lo. Isso permite armazenar,
+combinar ou exibir o mapa explicitamente no script chamador.
+
+
+## API de médias ponderadas por área
+
+### `extract_area_weighted_mean()`
+
+Calcula a média espacial ponderada pela área para cada variável de uma lista
+nomeada de `SpatRaster`, sobre um conjunto genérico de polígonos. A função
+calcula os pesos de interseção polígono--célula uma única vez e os reutiliza
+para todas as variáveis e camadas temporais.
+
+Essa função não é específica para municípios: pode ser utilizada com bacias
+hidrográficas, glebas ou qualquer outro conjunto de polígonos. Ela retorna um
+tibble em formato largo, com `polygon_id`, `date` e uma coluna para cada
+variável raster. Valores zero observados são preservados, enquanto `NA` é
+excluído tanto do numerador quanto do denominador.
+
+```{r, eval=FALSE}
+area_weighted_means <- extract_area_weighted_mean(
+  rasters = filled_monthly_rasters,
+  polygons = municipalities
+)
+```
+
+### `join_and_write_municipal_means()`
+
+É uma função específica para o produto municipal. Ela associa ao resultado do
+cálculo os atributos não geométricos dos municípios, identifica os estados
+presentes na coluna `state` e grava o tibble em formato `.fst`. O código dos
+estados é incorporado ao nome do arquivo, por exemplo:
+`municipal-monthly-meteorology-rs.fst`.
+
+```{r, eval=FALSE}
+municipal_monthly_means <- join_and_write_municipal_means(
+  means = area_weighted_means,
+  polygons = municipalities,
+  file_stem = "municipal-monthly-meteorology"
+)
+```
+
+As funções estão separadas em arquivos conforme sua responsabilidade:
+
+```text
+R/area-weighted-mean.R    # cálculo genérico
+R/municipal-output.R      # saída específica para municípios
+```
+
+## Validação com dados reais
+
+O diretório `inst/validation/` contém uma validação independente com dados reais do BR-DWGD e polígonos municipais do IBGE:
+
+```text
+inst/validation/
+├── validate-area-weighted-mean-real-data.R
+└── run-area-weighted-mean-real-data.R
+```
+
+O primeiro arquivo define `validate_area_weighted_mean_real_data()`. O segundo seleciona uma variável, um município e um mês e executa a validação.
+
+Para cada célula \(i\) interceptada pelo município, o peso é calculado explicitamente como
+
+$$
+w_i = f_i A_i,
+$$
+
+em que \(f_i\) é a fração da célula contida no município e \(A_i\) é sua área física. A média de referência é:
+
+$$
+\bar{x} = \frac{\sum_{i \in V} x_i f_i A_i}
+     {\sum_{i \in V} f_i A_i},
+$$
+
+sendo \(V\) o conjunto de células com valores válidos.
+
+O resultado explícito é comparado com:
+
+1. `area_weighted_mean_by_polygon()`, baseada em matriz esparsa;
+2. `extract_area_weighted_mean()`, responsável pela integração de múltiplas variáveis.
+
+A validação retorna:
+
+```r
+validation$summary
+validation$cells
+```
+
+`validation$summary` apresenta as médias calculadas pelos três métodos, as diferenças absoluta e relativa, a cobertura espacial válida e o resultado da comparação numérica.
+
+`validation$cells` permite auditar, célula por célula:
+
+* valor meteorológico;
+* fração interceptada;
+* área física;
+* peso espacial;
+* disponibilidade do dado;
+* contribuição para o numerador.
+
+A validação é considerada aprovada quando `validation_passed` é `TRUE`, considerando a tolerância numérica definida.
+
+### Distinção entre teste e validação
+
+Os testes sintéticos são rápidos, autocontidos e executados automaticamente. A validação com dados reais depende dos arquivos externos do *BR-DWGD* e do *IBGE* e, por isso, não faz parte da execução automática de `devtools::test()`.
