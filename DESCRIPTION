@@ -11,6 +11,8 @@ Description: Converts gridded BR-DWGD meteorological NetCDF rasters into
     municipal time series to disk.
 License: MIT + file LICENSE
 Encoding: UTF-8
+Depends:
+    R (>= 4.1.0)
 Roxygen: list(markdown = TRUE)
 Imports:
     checkmate,
