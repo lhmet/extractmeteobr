@@ -1,4 +1,0 @@
-interface:
-  display_name: "Explicar código científico"
-  short_description: "Explicação do código, método e fluxo de dados"
-  default_prompt: "Use $explain para explicar conceitualmente e linha a linha o código selecionado e seus custos computacionais."
