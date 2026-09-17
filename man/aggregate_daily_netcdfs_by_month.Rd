@@ -62,3 +62,12 @@ monthly_files <- aggregate_daily_netcdfs_by_month(
 }
 
 }
+\references{
+\href{https://sites.google.com/site/alexandrecandidoxavierufes/brazilian-daily-weather-gridded-data}{BR-DWGD author page}, including version information and downloads:
+\href{https://drive.google.com/drive/folders/11-qnvwojirAtaQxSE03N0_SUrbcsz44N}{ZIP archives} and \href{https://www.dropbox.com/scl/fo/t225fii1ir4o5ozga0o3u/ALZsq0F4zeCykN4GgoD8D6s?dl=0&rlkey=93nkonzxn08c4wioztkjq0x52&st=oq6g1i0m}{NetCDF files}.
+
+Xavier, A. C., Scanlon, B. R., King, C. W., and Alves, A. I. (2022).
+New improved Brazilian daily weather gridded data (1961–2020).
+International Journal of Climatology, 42(16), 8390–8404.
+DOI: \href{https://doi.org/10.1002/joc.7731}{10.1002/joc.7731}.
+}

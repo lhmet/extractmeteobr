@@ -82,6 +82,21 @@ fs::dir_tree(here::here("inst/ext/ibge"))
 
 ### Dados meteorológicos
 
+A fonte é o **Brazilian Daily Weather Gridded Data (BR-DWGD)**, de
+Xavier e colaboradores. Os arquivos usados neste projeto são da versão
+**3.2.4**, com dados diários de **1961 a 2025** em uma grade de **0,1° × 0,1°**.
+Consulte a [página do autor](https://sites.google.com/site/alexandrecandidoxavierufes/brazilian-daily-weather-gridded-data) e os downloads nela indicados:
+[arquivos compactados ZIP](https://drive.google.com/drive/folders/11-qnvwojirAtaQxSE03N0_SUrbcsz44N) ou [arquivos NetCDF](https://www.dropbox.com/scl/fo/t225fii1ir4o5ozga0o3u/ALZsq0F4zeCykN4GgoD8D6s?dl=0&rlkey=93nkonzxn08c4wioztkjq0x52&st=oq6g1i0m).
+
+Para o fluxo atual, obtenha precipitação (`pr`) e evapotranspiração de referência
+(`ETo`). Nos ZIPs, essas variáveis estão em `pr_Tmax_Tmin_NetCDF_Files.zip` e
+`ETo_u2_RH_Rs_NetCDF_Files.zip`, respectivamente. Os arquivos mensais usados
+pelo projeto são gerados a partir dos diários com `aggregate_daily_netcdfs_by_month()`.
+
+Citação indicada pelo autor: Xavier, A. C., Scanlon, B. R., King, C. W. e
+Alves, A. I. (2022). *New improved Brazilian daily weather gridded data
+(1961–2020)*. [DOI: 10.1002/joc.7731](https://doi.org/10.1002/joc.7731).
+
 Os dados diários do BR-DWGD ficam em `inst/ext/br-dwgd`. Os NetCDFs mensais
 usados pelo pipeline ficam no subdiretório `monthly` da atualização.
 

@@ -30,6 +30,22 @@
 #'   returns only the final municipal tibble. Superseded intermediate objects
 #'   are not included in the returned list.
 #'
+#' @details
+#' Project inputs use BR-DWGD version 3.2.4 daily precipitation and reference
+#' evapotranspiration for 1961–2025. Prepare the monthly files with
+#' [aggregate_daily_netcdfs_by_month()] before calling this pipeline.
+#' The pipeline reads caller-supplied monthly files; it does not download
+#' data or perform daily-to-monthly aggregation.
+#'
+#' @references
+#' [BR-DWGD author page](https://sites.google.com/site/alexandrecandidoxavierufes/brazilian-daily-weather-gridded-data), including version information and downloads:
+#' [ZIP archives](https://drive.google.com/drive/folders/11-qnvwojirAtaQxSE03N0_SUrbcsz44N) and [NetCDF files](https://www.dropbox.com/scl/fo/t225fii1ir4o5ozga0o3u/ALZsq0F4zeCykN4GgoD8D6s?dl=0&rlkey=93nkonzxn08c4wioztkjq0x52&st=oq6g1i0m).
+#'
+#' Xavier, A. C., Scanlon, B. R., King, C. W., and Alves, A. I. (2022).
+#' New improved Brazilian daily weather gridded data (1961–2020).
+#' International Journal of Climatology, 42(16), 8390–8404.
+#' DOI: [10.1002/joc.7731](https://doi.org/10.1002/joc.7731).
+#'
 #' @export
 run_meteo_pipeline <- function(
     states,

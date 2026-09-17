@@ -55,4 +55,19 @@ filling, area-weighted extraction, and municipal output steps in sequence.
 The functions used by this orchestrator must already be available in the
 current R session. This keeps the orchestration layer independent from the
 way the project functions are loaded.
+
+Project inputs use BR-DWGD version 3.2.4 daily precipitation and reference
+evapotranspiration for 1961–2025. Prepare the monthly files with
+\code{\link[=aggregate_daily_netcdfs_by_month]{aggregate_daily_netcdfs_by_month()}} before calling this pipeline.
+The pipeline reads caller-supplied monthly files; it does not download
+data or perform daily-to-monthly aggregation.
+}
+\references{
+\href{https://sites.google.com/site/alexandrecandidoxavierufes/brazilian-daily-weather-gridded-data}{BR-DWGD author page}, including version information and downloads:
+\href{https://drive.google.com/drive/folders/11-qnvwojirAtaQxSE03N0_SUrbcsz44N}{ZIP archives} and \href{https://www.dropbox.com/scl/fo/t225fii1ir4o5ozga0o3u/ALZsq0F4zeCykN4GgoD8D6s?dl=0&rlkey=93nkonzxn08c4wioztkjq0x52&st=oq6g1i0m}{NetCDF files}.
+
+Xavier, A. C., Scanlon, B. R., King, C. W., and Alves, A. I. (2022).
+New improved Brazilian daily weather gridded data (1961–2020).
+International Journal of Climatology, 42(16), 8390–8404.
+DOI: \href{https://doi.org/10.1002/joc.7731}{10.1002/joc.7731}.
 }
