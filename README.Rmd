@@ -28,10 +28,10 @@ hidrográficas e glebas.
 
 ## Instalação
 
-O pacote ainda não está no CRAN. Instale a versão em desenvolvimento com:
+O pacote ainda não está no CRAN. Instale a versão **0.1.0** com:
 
 ```r
-pak::pak("lhmet/extractmeteobr")
+pak::pak("lhmet/extractmeteobr@v0.1.0")
 ```
 
 ## Dados de entrada
