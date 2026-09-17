@@ -162,7 +162,7 @@ make_polygon_cell_weights <- function(
     .var.name = "all polygons intersect the raster"
   )
 
-  cells <- unique(intersections$cell)
+  cells <- funique::funique(intersections$cell)
   cell_areas <- terra::extract(
     terra::cellSize(reference_raster, unit = "m"),
     cells,
@@ -216,7 +216,7 @@ calculate_area_weighted_mean <- function(
     .var.name = paste0("complete time coordinate for ", variable)
   )
 
-  cells <- sort(unique(cell_weights$cell))
+  cells <- sort(funique::funique(cell_weights$cell))
   weight_matrix <- Matrix::sparseMatrix(
     i = cell_weights$ID,
     j = match(cell_weights$cell, cells),

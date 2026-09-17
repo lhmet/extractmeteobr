@@ -235,7 +235,7 @@ crop_netcdfs_by_prefix <- function(file_prefix, data_path, polygons) {
     \(time_values) paste(class(time_values), collapse = "/")
   )
   checkmate::assert_true(
-    length(unique(time_classes)) == 1,
+    length(funique::funique(time_classes)) == 1,
     .var.name = paste0(
       "consistent time classes for files matching ",
       file_prefix

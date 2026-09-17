@@ -120,6 +120,7 @@ area_weighted_means <- extract_area_weighted_mean(
 municipal_monthly_means <- join_and_write_municipal_means(
   means = area_weighted_means,
   polygons = municipalities,
+  attribute_cols = c("municipality", "state", "region"),
   output_dir = "path/to/output",
   file_stem = "municipal-monthly-meteorology"
 )

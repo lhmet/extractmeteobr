@@ -26,7 +26,8 @@ There is no default; the caller must supply the file path explicitly.}
 }
 \value{
 An \code{sf} object with the columns \code{polygon_id}, \code{municipality},
-\code{state}, and geometry. Each row represents one municipality or retained
+\code{state}, \code{region}, and geometry. State codes and region names are lowercase.
+Each row represents one municipality or retained
 IBGE feature.
 }
 \description{

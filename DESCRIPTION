@@ -21,6 +21,7 @@ Imports:
     dplyr,
     fs,
     fst,
+    funique,
     lubridate,
     Matrix,
     purrr,

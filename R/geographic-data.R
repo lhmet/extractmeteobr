@@ -1,3 +1,18 @@
+#' Map Brazilian state codes to their geographic regions
+#' @return A tibble with lowercase state and region columns.
+#' @keywords internal
+#' @noRd
+get_brazilian_state_regions <- function() {
+  tibble::tibble(
+    state = c("ac", "ap", "am", "pa", "ro", "rr", "to",
+              "al", "ba", "ce", "ma", "pb", "pe", "pi", "rn", "se",
+              "df", "go", "mt", "ms", "es", "mg", "rj", "sp",
+              "pr", "rs", "sc"),
+    region = rep(c("norte", "nordeste", "centro-oeste", "sudeste", "sul"),
+                 times = c(7, 9, 4, 4, 3))
+  )
+}
+
 #' Resolve Brazilian regions and state codes
 #'
 #' @param states Character vector containing lowercase state codes or one
@@ -8,16 +23,7 @@
 #' @keywords internal
 #' @noRd
 resolve_brazilian_states <- function(states) {
-  brazil_regions <- tibble::tibble(
-    region = c("norte", "nordeste", "centro-oeste", "sudeste", "sul"),
-    states = list(
-      c("ac", "ap", "am", "pa", "ro", "rr", "to"),
-      c("al", "ba", "ce", "ma", "pb", "pe", "pi", "rn", "se"),
-      c("df", "go", "mt", "ms"),
-      c("es", "mg", "rj", "sp"),
-      c("pr", "rs", "sc")
-    )
-  )
+  state_regions <- get_brazilian_state_regions()
 
   checkmate::assert_character(
     states,
@@ -30,9 +36,8 @@ resolve_brazilian_states <- function(states) {
     .var.name = "states in lowercase"
   )
 
-  if (length(states) == 1L && states %in% brazil_regions$region) {
-    region_index <- match(states, brazil_regions$region)
-    return(brazil_regions$states[[region_index]])
+  if (length(states) == 1L && states %in% state_regions$region) {
+    return(state_regions$state[state_regions$region == states])
   }
 
   checkmate::assert_character(
@@ -41,7 +46,7 @@ resolve_brazilian_states <- function(states) {
     .var.name = "lowercase Brazilian state codes"
   )
 
-  valid_states <- sort(unique(unlist(brazil_regions$states)))
+  valid_states <- sort(funique::funique(state_regions$state))
   checkmate::assert_subset(states, choices = valid_states)
   states
 }
@@ -136,7 +141,7 @@ load_polygon_data <- function(
     )
     checkmate::assert_subset(
       filter_values,
-      choices = unique(polygons[[filter_column]]),
+      choices = funique::funique(polygons[[filter_column]]),
       .var.name = "filter_values present in filter_column"
     )
 
@@ -152,7 +157,7 @@ load_polygon_data <- function(
     .var.name = "number of selected polygon features"
   )
 
-  geometry_types <- unique(as.character(sf::st_geometry_type(polygons)))
+  geometry_types <- funique::funique(as.character(sf::st_geometry_type(polygons)))
   checkmate::assert_subset(
     geometry_types,
     choices = c("POLYGON", "MULTIPOLYGON"),
@@ -224,7 +229,8 @@ load_polygon_data <- function(
 #'   `"Lagoa Mirim"` and `"Lagoa dos Patos"`.
 #'
 #' @return An `sf` object with the columns `polygon_id`, `municipality`,
-#'   `state`, and geometry. Each row represents one municipality or retained
+#'   `state`, `region`, and geometry. State codes and region names are lowercase.
+#'   Each row represents one municipality or retained
 #'   IBGE feature.
 #'
 #' @details
@@ -284,6 +290,10 @@ load_ibge_municipalities <- function(
   names(municipalities)[names(municipalities) == "NM_MUN"] <- "municipality"
   names(municipalities)[names(municipalities) == "SIGLA_UF"] <- "state"
   municipalities$state <- tolower(municipalities$state)
+  state_regions <- get_brazilian_state_regions()
+  municipalities$region <- state_regions$region[
+    match(municipalities$state, state_regions$state)
+  ]
 
   if (remove_lagoons) {
     lagoon_names <- c("Lagoa Mirim", "Lagoa dos Patos")
@@ -295,7 +305,7 @@ load_ibge_municipalities <- function(
   }
 
   municipalities |>
-    dplyr::select(polygon_id, municipality, state)
+    dplyr::select(dplyr::all_of(c("polygon_id", "municipality", "state", "region")))
 }
 
 #' Load IBGE state polygons
@@ -418,7 +428,7 @@ select_largest_polygon <- function(polygons) {
     .var.name = "defined polygon CRS"
   )
 
-  geometry_types <- unique(as.character(sf::st_geometry_type(polygons)))
+  geometry_types <- funique::funique(as.character(sf::st_geometry_type(polygons)))
   checkmate::assert_subset(
     geometry_types,
     choices = c("POLYGON", "MULTIPOLYGON"),

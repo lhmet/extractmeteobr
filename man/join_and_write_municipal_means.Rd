@@ -9,32 +9,42 @@ join_and_write_municipal_means(
   polygons,
   output_dir,
   id_col = "polygon_id",
-  state_col = "state",
-  region = NULL,
+  attribute_cols = NULL,
   file_stem = "area-weighted-means"
 )
 }
 \arguments{
-\item{means}{Tibble returned by \code{\link[=extract_area_weighted_mean]{extract_area_weighted_mean()}}.}
+\item{means}{Tibble returned by \code{\link[=extract_area_weighted_mean]{extract_area_weighted_mean()}}, containing
+non-missing, non-blank character \code{polygon_id} values present in \code{polygons}.
+An identifier may occur on multiple dates.}
 
-\item{polygons}{An sf object containing municipal attributes.}
+\item{polygons}{An \code{sf} object containing polygon attributes.}
 
 \item{output_dir}{Character scalar giving the output directory. There is no
 default; the caller must supply the directory explicitly.}
 
-\item{id_col}{Character scalar naming the polygon identifier.}
+\item{id_col}{Character scalar naming the polygon identifier. Values must
+be non-missing, non-blank, and unique after conversion to character.}
 
-\item{state_col}{Character scalar naming the state identifier.}
+\item{attribute_cols}{Optional character vector naming polygon attributes
+to retain. \code{NULL} retains all non-geometry attributes. The identifier in
+\code{id_col} is always retained, including with \code{character(0)}.}
 
-\item{region}{Optional lowercase Brazilian region name used as the output
-suffix instead of concatenated state codes.}
-
-\item{file_stem}{Character scalar used before the state suffix.}
+\item{file_stem}{Character scalar used before an optional geographic suffix.}
 }
 \value{
-The joined tibble.
+A tibble preserving the rows and values of \code{means}, with the selected
+polygon attributes inserted between \code{polygon_id} and \code{date}.
 }
 \description{
 Adds municipal attributes to the generic polygon means and writes the
-result to an \code{.fst} file with the state identifier in its name.
+result to an \code{.fst} file. Selected polygon attributes are retained before
+joining, without requiring municipal-specific attributes.
+}
+\details{
+When \code{polygons} contains \code{state}, the filename suffix uses sorted lowercase
+state codes. If it also contains \code{region} and covers all states of one
+Brazilian region, that region name is used instead. Without \code{state}, only
+\code{file_stem} is used. Filename metadata is read from \code{polygons} independently
+of \code{attribute_cols}.
 }

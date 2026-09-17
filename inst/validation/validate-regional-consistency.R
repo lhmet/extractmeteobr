@@ -45,7 +45,7 @@ validate_regional_consistency <- function(
   checkmate::assert_string(state_col)
   checkmate::assert_number(tolerance, lower = 0, finite = TRUE)
 
-  required_columns <- unique(c(key_cols, state_col, variables))
+  required_columns <- funique::funique(c(key_cols, state_col, variables))
   checkmate::assert_names(
     names(regional_data),
     must.include = required_columns

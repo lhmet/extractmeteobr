@@ -33,7 +33,8 @@ default; the caller must supply the directory explicitly.}
 \item{variables}{Character vector of raster variables.}
 
 \item{target_crs}{CRS used for the polygons and rasters. If \code{NULL}, it is
-inferred from the first monthly NetCDF created or reused.}
+inferred from the first monthly NetCDF matching the first entry in
+\code{variables}. With an explicit CRS, no reference file is read.}
 
 \item{file_stem}{Output file stem before the state suffix.}
 

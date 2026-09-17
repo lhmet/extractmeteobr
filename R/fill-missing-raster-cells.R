@@ -103,7 +103,7 @@ fill_missing_raster_cells <- function(
     polygons,
     touches = TRUE
   )[, "cell"] |>
-    unique()
+    funique::funique()
   checkmate::assert_true(
     length(intersecting_cells) > 0,
     .var.name = "raster cells intersecting polygons"

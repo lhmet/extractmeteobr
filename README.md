@@ -268,7 +268,8 @@ Seus principais argumentos são:
 - `output_dir`: diretório do arquivo final (obrigatório);
 - `variables`: variáveis raster, com `c("pr", "ETo")` como padrão;
 - `target_crs`: CRS comum a polígonos e rasters; se `NULL` (padrão), é
-  inferido do primeiro NetCDF mensal;
+  inferido do primeiro NetCDF mensal correspondente à primeira variável
+  solicitada;
 - `file_stem`: prefixo do nome do arquivo de saída, antes do sufixo de
   estado ou região;
 - `return_intermediate`: inclui ou omite os resultados intermediários.
@@ -315,7 +316,7 @@ polygons <- load_polygon_data(
 ### `load_ibge_municipalities()`
 
 Adapta `load_polygon_data()` à malha municipal do IBGE. Retorna um
-objeto `sf` com `polygon_id`, `municipality`, `state` e geometria.
+objeto `sf` com `polygon_id`, `municipality`, `state`, `region` e geometria.
 `states` aceita códigos estaduais ou uma região, sempre em letras
 minúsculas. `data_path` é obrigatório (sem valor padrão). A função
 também oferece a regra específica para remoção de Lagoa Mirim e Lagoa
@@ -425,16 +426,26 @@ numerador e denominador.
 
 ## Saída municipal: `join_and_write_municipal_means()`
 
-Associa os atributos municipais ao resultado genérico e grava o tibble
-em `.fst`. Essa função específica fica em `R/municipal-output.R`. Em
-execuções regionais, usa o nome da região no arquivo; nas demais, usa os
-códigos estaduais. `output_dir` é obrigatório (sem valor padrão), e o
-diretório é criado quando ainda não existe.
+Antes da junção, os identificadores dos polígonos devem ser únicos, não
+ausentes e não vazios. Cada `polygon_id` das médias deve existir nos polígonos;
+o mesmo identificador pode ocorrer em várias datas.
+
+Associa os atributos selecionados de `polygons` às médias e grava o tibble
+em `.fst`. `attribute_cols` indica as colunas a manter; `NULL` mantém todos
+os atributos, e o identificador é sempre incluído. A geometria não é juntada.
+O carregamento municipal inclui `municipality`, `state` e `region`.
+
+O sufixo do arquivo é obtido de `polygons`: usa a região quando todos os seus
+estados estão presentes, ou os códigos estaduais ordenados para recortes
+parciais. Sem `state`, usa apenas `file_stem`. Essas colunas podem ser usadas
+no nome do arquivo mesmo que não sejam selecionadas em `attribute_cols`.
+`output_dir` é obrigatório e criado quando ainda não existe.
 
 ``` r
 municipal_monthly_means <- join_and_write_municipal_means(
   means = area_weighted_means,
   polygons = municipalities,
+  attribute_cols = c("municipality", "state", "region"),
   output_dir = here::here("data/processed")
 )
 ```

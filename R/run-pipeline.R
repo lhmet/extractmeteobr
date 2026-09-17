@@ -19,7 +19,8 @@
 #'   default; the caller must supply the directory explicitly.
 #' @param variables Character vector of raster variables.
 #' @param target_crs CRS used for the polygons and rasters. If `NULL`, it is
-#'   inferred from the first monthly NetCDF created or reused.
+#'   inferred from the first monthly NetCDF matching the first entry in
+#'   `variables`. With an explicit CRS, no reference file is read.
 #' @param file_stem Output file stem before the state suffix.
 #' @param return_intermediate Logical scalar. If `TRUE`, returns the outputs of
 #'   all pipeline stages. If `FALSE`, returns only the final municipal data.
@@ -57,18 +58,6 @@ run_meteo_pipeline <- function(
     file_stem = "municipal-monthly-meteorology",
     return_intermediate = TRUE
 ) {
-  brazilian_regions <- c(
-    "norte",
-    "nordeste",
-    "centro-oeste",
-    "sudeste",
-    "sul"
-  )
-  region <- if (length(states) == 1L && states %in% brazilian_regions) {
-    states
-  } else {
-    NULL
-  }
   states <- resolve_brazilian_states(states)
   checkmate::assert_character(variables, min.len = 1, unique = TRUE)
   checkmate::assert_flag(return_intermediate)
@@ -80,11 +69,18 @@ run_meteo_pipeline <- function(
   )
   checkmate::assert_character(monthly_files, min.len = 1)
 
-  first_monthly_file <- monthly_files[
-    stringr::str_starts(fs::path_file(monthly_files), "pr_mly_")
-  ][[1]]
   if (is.null(target_crs)) {
-    target_crs <- terra::crs(terra::rast(first_monthly_file))
+    reference_prefix <- paste0(variables[[1]], "_mly_")
+    reference_files <- monthly_files[
+      stringr::str_starts(fs::path_file(monthly_files), reference_prefix)
+    ]
+    if (length(reference_files) == 0L) {
+      cli::cli_abort(c(
+        "Cannot infer `target_crs` from the requested reference variable.",
+        "x" = "No monthly NetCDF starts with '{reference_prefix}' in `monthly_data_path`."
+      ))
+    }
+    target_crs <- terra::crs(terra::rast(reference_files[[1]]))
   }
 
   municipalities <- load_ibge_municipalities(
@@ -120,8 +116,7 @@ run_meteo_pipeline <- function(
     means = area_weighted_means,
     polygons = municipalities,
     id_col = "polygon_id",
-    state_col = "state",
-    region = region,
+    attribute_cols = c("municipality", "state", "region"),
     output_dir = output_dir,
     file_stem = file_stem
   )

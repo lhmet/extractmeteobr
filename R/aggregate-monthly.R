@@ -293,7 +293,7 @@ aggregate_daily_netcdf_by_month <- function(
   )
 
   month_index <- lubridate::floor_date(daily_dates, unit = "month")
-  months <- unique(month_index)
+  months <- funique::funique(month_index)
 
   cli::cli_alert_info(
     "Aggregating daily file {.file {fs::path_file(data_file)}} by month."

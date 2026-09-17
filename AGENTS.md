@@ -161,6 +161,7 @@ Prefer:
 
 - the native R pipe `|>` when consistent with the surrounding code;
 - explicit package namespaces such as `terra::extract()`;
+- `funique::funique()` when calculating unique values of atomic or date-time vectors;
 - meaningful intermediate objects for scientifically or computationally important results;
 - cohesive functions with early validation;
 - consistent indentation and line breaks;
