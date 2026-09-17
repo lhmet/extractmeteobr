@@ -34,6 +34,20 @@ os dados usados em desenvolvimento e validação ficam em `inst/ext/`.
 
 ### Dados geográficos
 
+Os arquivos `BR_Municipios_2022` e `BR_UF_2022` correspondem à edição
+**2022 da Malha Municipal Digital**, produzida pelo Instituto Brasileiro de
+Geografia e Estatística (**IBGE**). A [página oficial dessa edição](https://www.ibge.gov.br/geociencias/organizacao-do-territorio/malhas-territoriais/15774-malhas.html?edicao=36516&t=acesso-ao-produto)
+apresenta o produto e suas características técnicas.
+
+| Arquivos locais | Conteúdo | Download oficial |
+| --- | --- | --- |
+| `BR_Municipios_2022/BR_Municipios_2022.shp` | Municípios e demais feições da malha municipal de 2022 | [BR_Municipios_2022.zip](https://geoftp.ibge.gov.br/organizacao_do_territorio/malhas_territoriais/malhas_municipais/municipio_2022/Brasil/BR/BR_Municipios_2022.zip) |
+| `BR_UF_2022/BR_UF_2022.shp` | Limites das Unidades da Federação de 2022 | [BR_UF_2022.zip](https://geoftp.ibge.gov.br/organizacao_do_territorio/malhas_territoriais/malhas_municipais/municipio_2022/Brasil/BR/BR_UF_2022.zip) |
+
+Extraia cada ZIP para a pasta correspondente e mantenha juntos os arquivos
+`.shp`, `.shx`, `.dbf`, `.prj` e `.cpg`. Esses dados são obtidos separadamente:
+não acompanham a instalação do pacote nem são publicados neste repositório.
+
 A malha municipal do IBGE e os limites estaduais ficam em
 `inst/ext/ibge`:
 

@@ -33,6 +33,13 @@ IBGE feature.
 Loads municipalities for one or more Brazilian states through
 \code{\link[=load_polygon_data]{load_polygon_data()}} and standardizes the attributes used by this project.
 }
+\details{
+The project examples use the IBGE 2022 edition of the Malha Municipal
+Digital. Obtain the vector data separately and keep the extracted Shapefile
+components together. This function reads the file supplied in \code{data_path};
+it does not download data or require the 2022 edition when another edition
+has compatible attributes.
+}
 \examples{
 \dontrun{
 municipalities <- load_ibge_municipalities(
@@ -42,4 +49,15 @@ municipalities <- load_ibge_municipalities(
 )
 }
 
+}
+\references{
+IBGE. Malha Municipal Digital, 2022 edition:
+\href{https://www.ibge.gov.br/geociencias/organizacao-do-territorio/malhas-territoriais/15774-malhas.html?edicao=36516&t=acesso-ao-produto}{official product page}.
+Municipality data: \href{https://geoftp.ibge.gov.br/organizacao_do_territorio/malhas_territoriais/malhas_municipais/municipio_2022/Brasil/BR/BR_Municipios_2022.zip}{BR_Municipios_2022.zip}.
+
+IBGE. Malha Municipal Digital e Áreas Territoriais 2022: Informações
+Técnicas e Legais para a Utilização dos Dados Publicados.
+\href{https://biblioteca.ibge.gov.br/visualizacao/livros/liv101998.pdf}{Technical documentation}.
+Source links consulted on 2026-09-17; the original local download date
+is not recorded.
 }
