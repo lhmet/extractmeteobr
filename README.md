@@ -4,7 +4,6 @@
 # extractmeteobr
 
 <!-- badges: start -->
-
 <!-- badges: end -->
 
 O **extractmeteobr** transforma dados meteorológicos gradeados do Brasil
@@ -18,8 +17,7 @@ hidrográficas e glebas.
 
 ## Instalação
 
-O pacote ainda não está no CRAN. Instale a versão **0.1.0**
-com:
+O pacote ainda não está no CRAN. Instale a versão **0.1.0** com:
 
 ``` r
 pak::pak("lhmet/extractmeteobr@v0.1.0")
@@ -35,18 +33,20 @@ os dados usados em desenvolvimento e validação ficam em `inst/ext/`.
 ### Dados geográficos
 
 Os arquivos `BR_Municipios_2022` e `BR_UF_2022` correspondem à edição
-**2022 da Malha Municipal Digital**, produzida pelo Instituto Brasileiro de
-Geografia e Estatística (**IBGE**). A [página oficial dessa edição](https://www.ibge.gov.br/geociencias/organizacao-do-territorio/malhas-territoriais/15774-malhas.html?edicao=36516&t=acesso-ao-produto)
+**2022 da Malha Municipal Digital**, produzida pelo Instituto Brasileiro
+de Geografia e Estatística (**IBGE**). A [página oficial dessa
+edição](https://www.ibge.gov.br/geociencias/organizacao-do-territorio/malhas-territoriais/15774-malhas.html?edicao=36516&t=acesso-ao-produto)
 apresenta o produto e suas características técnicas.
 
-| Arquivos locais | Conteúdo | Download oficial |
-| --- | --- | --- |
+| Arquivos locais                             | Conteúdo                                               | Download oficial                                                                                                                                                     |
+|---------------------------------------------|--------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `BR_Municipios_2022/BR_Municipios_2022.shp` | Municípios e demais feições da malha municipal de 2022 | [BR_Municipios_2022.zip](https://geoftp.ibge.gov.br/organizacao_do_territorio/malhas_territoriais/malhas_municipais/municipio_2022/Brasil/BR/BR_Municipios_2022.zip) |
-| `BR_UF_2022/BR_UF_2022.shp` | Limites das Unidades da Federação de 2022 | [BR_UF_2022.zip](https://geoftp.ibge.gov.br/organizacao_do_territorio/malhas_territoriais/malhas_municipais/municipio_2022/Brasil/BR/BR_UF_2022.zip) |
+| `BR_UF_2022/BR_UF_2022.shp`                 | Limites das Unidades da Federação de 2022              | [BR_UF_2022.zip](https://geoftp.ibge.gov.br/organizacao_do_territorio/malhas_territoriais/malhas_municipais/municipio_2022/Brasil/BR/BR_UF_2022.zip)                 |
 
-Extraia cada ZIP para a pasta correspondente e mantenha juntos os arquivos
-`.shp`, `.shx`, `.dbf`, `.prj` e `.cpg`. Esses dados são obtidos separadamente:
-não acompanham a instalação do pacote nem são publicados neste repositório.
+Extraia cada ZIP para a pasta correspondente e mantenha juntos os
+arquivos `.shp`, `.shx`, `.dbf`, `.prj` e `.cpg`. Esses dados são
+obtidos separadamente: não acompanham a instalação do pacote nem são
+publicados neste repositório.
 
 A malha municipal do IBGE e os limites estaduais ficam em
 `inst/ext/ibge`:
@@ -74,19 +74,21 @@ fs::dir_tree(here::here("inst/ext/ibge"))
 ### Dados meteorológicos
 
 A fonte é o **Brazilian Daily Weather Gridded Data (BR-DWGD)**, de
-Xavier e colaboradores. Os arquivos usados neste projeto são da versão
-**3.2.4**, com dados diários de **1961 a 2025** em uma grade de **0,1° × 0,1°**.
-Consulte a [página do autor](https://sites.google.com/site/alexandrecandidoxavierufes/brazilian-daily-weather-gridded-data) e os downloads nela indicados:
-[arquivos compactados ZIP](https://drive.google.com/drive/folders/11-qnvwojirAtaQxSE03N0_SUrbcsz44N) ou [arquivos NetCDF](https://www.dropbox.com/scl/fo/t225fii1ir4o5ozga0o3u/ALZsq0F4zeCykN4GgoD8D6s?dl=0&rlkey=93nkonzxn08c4wioztkjq0x52&st=oq6g1i0m).
+Xavier e colaboradores, cuja metodologia é descrita por Xavier et
+al. (2022). Os arquivos usados neste projeto são da versão **3.2.4**,
+com dados diários de **1961 a 2025** em uma grade de **0,1° × 0,1°**.
+Consulte a [página do
+autor](https://sites.google.com/site/alexandrecandidoxavierufes/brazilian-daily-weather-gridded-data)
+e os downloads nela indicados: [arquivos compactados
+ZIP](https://drive.google.com/drive/folders/11-qnvwojirAtaQxSE03N0_SUrbcsz44N)
+ou [arquivos
+NetCDF](https://www.dropbox.com/scl/fo/t225fii1ir4o5ozga0o3u/ALZsq0F4zeCykN4GgoD8D6s?dl=0&rlkey=93nkonzxn08c4wioztkjq0x52&st=oq6g1i0m).
 
-Para o fluxo atual, obtenha precipitação (`pr`) e evapotranspiração de referência
-(`ETo`). Nos ZIPs, essas variáveis estão em `pr_Tmax_Tmin_NetCDF_Files.zip` e
-`ETo_u2_RH_Rs_NetCDF_Files.zip`, respectivamente. Os arquivos mensais usados
-pelo projeto são gerados a partir dos diários com `aggregate_daily_netcdfs_by_month()`.
-
-Citação indicada pelo autor: Xavier, A. C., Scanlon, B. R., King, C. W. e
-Alves, A. I. (2022). *New improved Brazilian daily weather gridded data
-(1961–2020)*. [DOI: 10.1002/joc.7731](https://doi.org/10.1002/joc.7731).
+Para o fluxo atual, obtenha precipitação (`pr`) e evapotranspiração de
+referência (`ETo`). Nos ZIPs, essas variáveis estão em
+`pr_Tmax_Tmin_NetCDF_Files.zip` e `ETo_u2_RH_Rs_NetCDF_Files.zip`,
+respectivamente. Os arquivos mensais usados pelo projeto são gerados a
+partir dos diários com `aggregate_daily_netcdfs_by_month()`.
 
 Os dados diários do BR-DWGD ficam em `inst/ext/br-dwgd`. Os NetCDFs
 mensais usados pelo pipeline ficam no subdiretório `monthly` da
@@ -233,15 +235,15 @@ executá-las separadamente, útil para inspeção ou depuração.
 
 ![](README_files/figure-gfm/pipeline-diagram-1.png)<!-- -->
 
-| Etapa | Arquivo em `R/` | Função principal | Papel no pipeline |
-|----|----|----|----|
-| 0 | `aggregate-monthly.R` | `aggregate_daily_netcdfs_by_month()` | Agrega os NetCDFs diários (`pr`, `ETo`) em `SpatRaster` mensais para todo o Brasil. Pré-processamento único, fora do pipeline regional. |
-| 1 | `geographic-data.R` | `load_ibge_municipalities()` | Carrega os municípios dos estados ou da região solicitada. |
-| 2 | `crop-netcdfs.R` | `crop_netcdfs()` | Recorta os rasters mensais para a extensão desses municípios. |
-| 3 | `fill-missing-raster-cells.R` | `fill_missing_raster_cells()` | Preenche por IDW as células `NA` que interceptam os municípios, somente se necessário. |
-| 4 | `area-weighted-mean.R`, `municipal-output.R` | `extract_area_weighted_mean()`, `join_and_write_municipal_means()` | Calcula as médias ponderadas por área e grava o arquivo `.fst`. |
-| — | `run-pipeline.R` | `run_meteo_pipeline()` | Orquestra as etapas 1 a 4 para um conjunto de estados ou uma região. |
-| — | `interactive-maps.R` | `make_interactive_spatial_map()` | Mapa interativo opcional (requer o pacote `tmap`) para inspecionar polígonos e rasters. |
+| Etapa | Arquivo em `R/`                              | Função principal                                                   | Papel no pipeline                                                                                                                       |
+|-------|----------------------------------------------|--------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|
+| 0     | `aggregate-monthly.R`                        | `aggregate_daily_netcdfs_by_month()`                               | Agrega os NetCDFs diários (`pr`, `ETo`) em `SpatRaster` mensais para todo o Brasil. Pré-processamento único, fora do pipeline regional. |
+| 1     | `geographic-data.R`                          | `load_ibge_municipalities()`                                       | Carrega os municípios dos estados ou da região solicitada.                                                                              |
+| 2     | `crop-netcdfs.R`                             | `crop_netcdfs()`                                                   | Recorta os rasters mensais para a extensão desses municípios.                                                                           |
+| 3     | `fill-missing-raster-cells.R`                | `fill_missing_raster_cells()`                                      | Preenche por IDW as células `NA` que interceptam os municípios, somente se necessário.                                                  |
+| 4     | `area-weighted-mean.R`, `municipal-output.R` | `extract_area_weighted_mean()`, `join_and_write_municipal_means()` | Calcula as médias ponderadas por área e grava o arquivo `.fst`.                                                                         |
+| —     | `run-pipeline.R`                             | `run_meteo_pipeline()`                                             | Orquestra as etapas 1 a 4 para um conjunto de estados ou uma região.                                                                    |
+| —     | `interactive-maps.R`                         | `make_interactive_spatial_map()`                                   | Mapa interativo opcional (requer o pacote `tmap`) para inspecionar polígonos e rasters.                                                 |
 
 ## Funções principais e auxiliares
 
@@ -316,11 +318,11 @@ polygons <- load_polygon_data(
 ### `load_ibge_municipalities()`
 
 Adapta `load_polygon_data()` à malha municipal do IBGE. Retorna um
-objeto `sf` com `polygon_id`, `municipality`, `state`, `region` e geometria.
-`states` aceita códigos estaduais ou uma região, sempre em letras
-minúsculas. `data_path` é obrigatório (sem valor padrão). A função
-também oferece a regra específica para remoção de Lagoa Mirim e Lagoa
-dos Patos.
+objeto `sf` com `polygon_id`, `municipality`, `state`, `region` e
+geometria. `states` aceita códigos estaduais ou uma região, sempre em
+letras minúsculas. `data_path` é obrigatório (sem valor padrão). A
+função também oferece a regra específica para remoção de Lagoa Mirim e
+Lagoa dos Patos.
 
 ``` r
 reference_crs <- fs::dir_ls(
@@ -389,7 +391,9 @@ contrário, aplica interpolação focal IDW a todos os rasters. Somente
 células originalmente ausentes são modificadas. Para distância $d_i$, o
 peso é
 
-$$w_i = \frac{1}{d_i^p}.$$
+$$
+w_i = \frac{1}{d_i^p}.
+$$
 
 `power` define $p$, com padrão 2. `window_size` define a janela
 quadrada, com padrão 5, e deve ser ímpar e igual ou superior a 3. A
@@ -415,9 +419,11 @@ A função retorna um tibble amplo com `polygon_id`, `date` e uma coluna
 por variável. Para o valor $x_{i,t}$ da célula $i$ na data $t$, a média
 do polígono $j$ é
 
-$$\bar{x}_{j,t} =
+$$
+\bar{x}_{j,t} =
 \frac{\sum_i I_{i,t} x_{i,t} f_{i,j} A_i}
-     {\sum_i I_{i,t} f_{i,j} A_i},$$
+     {\sum_i I_{i,t} f_{i,j} A_i},
+$$
 
 em que $(f_{i,j}$ é a fração da célula no polígono, $A_i$ é a área
 física da célula e $I_{i,t}$ vale 1 para dados disponíveis e 0 para
@@ -427,19 +433,21 @@ numerador e denominador.
 ## Saída municipal: `join_and_write_municipal_means()`
 
 Antes da junção, os identificadores dos polígonos devem ser únicos, não
-ausentes e não vazios. Cada `polygon_id` das médias deve existir nos polígonos;
-o mesmo identificador pode ocorrer em várias datas.
+ausentes e não vazios. Cada `polygon_id` das médias deve existir nos
+polígonos; o mesmo identificador pode ocorrer em várias datas.
 
-Associa os atributos selecionados de `polygons` às médias e grava o tibble
-em `.fst`. `attribute_cols` indica as colunas a manter; `NULL` mantém todos
-os atributos, e o identificador é sempre incluído. A geometria não é juntada.
-O carregamento municipal inclui `municipality`, `state` e `region`.
+Associa os atributos selecionados de `polygons` às médias e grava o
+tibble em `.fst`. `attribute_cols` indica as colunas a manter; `NULL`
+mantém todos os atributos, e o identificador é sempre incluído. A
+geometria não é juntada. O carregamento municipal inclui `municipality`,
+`state` e `region`.
 
-O sufixo do arquivo é obtido de `polygons`: usa a região quando todos os seus
-estados estão presentes, ou os códigos estaduais ordenados para recortes
-parciais. Sem `state`, usa apenas `file_stem`. Essas colunas podem ser usadas
-no nome do arquivo mesmo que não sejam selecionadas em `attribute_cols`.
-`output_dir` é obrigatório e criado quando ainda não existe.
+O sufixo do arquivo é obtido de `polygons`: usa a região quando todos os
+seus estados estão presentes, ou os códigos estaduais ordenados para
+recortes parciais. Sem `state`, usa apenas `file_stem`. Essas colunas
+podem ser usadas no nome do arquivo mesmo que não sejam selecionadas em
+`attribute_cols`. `output_dir` é obrigatório e criado quando ainda não
+existe.
 
 ``` r
 municipal_monthly_means <- join_and_write_municipal_means(
@@ -453,11 +461,11 @@ municipal_monthly_means <- join_and_write_municipal_means(
 ## Visualização: `make_interactive_spatial_map()`
 
 Cria um mapa `tmap` com os polígonos e um ponto clicável por feição.
-Pode incluir um raster com rótulo, unidade e data. Requer `tmap` 4.0 ou posterior.
-A função retorna o
-mapa sem imprimi-lo e não participa do pipeline principal. `popup_vars`
-define os campos exibidos e `popup_title` define o título do popup e o
-texto mostrado ao passar o cursor.
+Pode incluir um raster com rótulo, unidade e data. Requer `tmap` 4.0 ou
+posterior. A função retorna o mapa sem imprimi-lo e não participa do
+pipeline principal. `popup_vars` define os campos exibidos e
+`popup_title` define o título do popup e o texto mostrado ao passar o
+cursor.
 
 # Validação dos cálculos espaciais
 
@@ -497,13 +505,17 @@ contribuições de cada célula.
 Para cada célula $i$ interceptada pelo município, o peso é calculado
 explicitamente, de forma independente da função em avaliação, como
 
-$$w_i = f_i A_i,$$
+$$
+w_i = f_i A_i,
+$$
 
 em que $f_i$ é a fração da célula contida no município e $A_i$ é sua
 área física. A média de referência é:
 
-$$\bar{x} = \frac{\sum_{i \in V} x_i f_i A_i}
-     {\sum_{i \in V} f_i A_i},$$
+$$
+\bar{x} = \frac{\sum_{i \in V} x_i f_i A_i}
+     {\sum_{i \in V} f_i A_i},
+$$
 
 sendo $V$ o conjunto de células com valores válidos. O resultado
 explícito é comparado com:
@@ -548,9 +560,11 @@ source(here::here("inst/validation/run-regional-consistency.R"))
 duplicadas, registros exclusivos, diferenças na posição de `NA` e
 diferenças numéricas em `pr` e `ETo`. A diferença escalonada é
 
-$$d = \frac{|x_{\mathrm{regional}} - x_{\mathrm{estadual}}|}
+$$
+d = \frac{|x_{\mathrm{regional}} - x_{\mathrm{estadual}}|}
 {\max\left(|x_{\mathrm{regional}}|,
-           |x_{\mathrm{estadual}}|, 1\right)}.$$
+           |x_{\mathrm{estadual}}|, 1\right)}.
+$$
 
 Os valores são equivalentes quando $d \leq 10^{-12}$. Chaves ausentes,
 duplicações ou diferenças na posição de `NA` reprovam a validação. O
@@ -575,3 +589,10 @@ automaticamente por `devtools::test()`. As validações com dados reais
 ficam em `inst/validation/` e não integram a suíte automática porque
 dependem de arquivos externos do BR-DWGD e do IBGE, ou de resultados
 previamente processados pelo pipeline.
+
+# Referências
+
+XAVIER, A. C.; SCANLON, B. R.; KING, C. W.; ALVES, A. I. New improved
+Brazilian daily weather gridded data (1961–2020). **International
+Journal of Climatology**, v. 42, n. 16, p. 8390–8404, 2022. DOI:
+10.1002/joc.7731.
