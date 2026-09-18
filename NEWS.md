@@ -27,5 +27,4 @@ First public release.
   region uses its name as the filename suffix, including when its states
   are supplied individually; partial selections use sorted state codes.
 * Raw IBGE and BR-DWGD inputs are external and are not distributed with
-  the package. Local agent skills are excluded from the current repository
-  tree and package archive.
+  the package.
