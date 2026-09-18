@@ -1,8 +1,13 @@
-# extractmeteobr (development version)
+# extractmeteobr 0.2.0
 
 * Rename `join_and_write_municipal_means()` to
   `join_and_write_polygon_means()` to reflect its generic polygon interface.
   Update direct calls to use the new name; arguments and calculations are unchanged.
+
+* Use generic polygon names for internal objects and output implementation.
+* Identify Jônatan Dupont Tatsch as author and LHMET as maintainer.
+* Add software citation metadata and future work for catchment datasets and
+  additional BR-DWGD variables.
 
 # extractmeteobr 0.1.0
 

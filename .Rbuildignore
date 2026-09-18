@@ -15,3 +15,4 @@
 ^docs$
 ^vignettes/readme-bck\.Rmd$
 ^TODO\.md$
+^CITATION\.cff$

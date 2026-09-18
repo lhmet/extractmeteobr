@@ -14,7 +14,7 @@ time series for Brazilian municipalities and states.
 
 Authors:
 \itemize{
-  \item Jônatan Dupont Tatsch (Contact: jdtatsch [at] gmail.com)
+  \item Jônatan Dupont Tatsch (\href{https://orcid.org/0000-0003-0930-9461}{ORCID}) (Contact: jdtatsch [at] gmail.com)
 }
 
 }

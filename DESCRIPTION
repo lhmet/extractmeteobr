@@ -1,10 +1,11 @@
 Package: extractmeteobr
 Title: Extract Area-Weighted Municipal Meteorological Time Series for Brazil
-Version: 0.1.0
+Version: 0.2.0
 Authors@R:
     c(
         person("Jônatan Dupont", "Tatsch", role = "aut",
-               comment = "Contact: jdtatsch [at] gmail.com"),
+               comment = c(ORCID = "0000-0003-0930-9461",
+                           Contact = "jdtatsch [at] gmail.com")),
         person("LHMET", email = "lhmet@ufsm.br", role = "cre")
     )
 Description: Converts gridded BR-DWGD meteorological NetCDF rasters into

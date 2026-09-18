@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: >-
+  If you use extractmeteobr in your research, please cite this software.
+type: software
+title: 'extractmeteobr: Extract Area-Weighted Municipal Meteorological Time Series for Brazil'
+authors:
+  - family-names: Tatsch
+    given-names: Jônatan Dupont
+    orcid: 'https://orcid.org/0000-0003-0930-9461'
+version: 0.2.0
+license: MIT
+repository-code: 'https://github.com/lhmet/extractmeteobr'
+url: 'https://github.com/lhmet/extractmeteobr'
+abstract: >-
+  R package that converts BR-DWGD meteorological NetCDF rasters into
+  area-weighted time series for Brazilian municipalities. Provides polygon
+  loading, raster cropping and aggregation, missing-cell interpolation,
+  physical-area-weighted spatial means, and output in FST format.
+keywords:
+  - R
+  - meteorology
+  - Brazil
+  - BR-DWGD
+  - spatial analysis
+  - reproducible research

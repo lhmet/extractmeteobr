@@ -28,10 +28,10 @@ hidrográficas e glebas.
 
 ## Instalação
 
-O pacote ainda não está no CRAN. Instale a versão **0.1.0** com:
+O pacote ainda não está no CRAN. Instale a versão **0.2.0** com:
 
 ```r
-pak::pak("lhmet/extractmeteobr@v0.1.0")
+pak::pak("lhmet/extractmeteobr@v0.2.0")
 ```
 
 ## Dados de entrada
@@ -668,6 +668,16 @@ por `devtools::test()`. As validações com dados reais ficam em
 `inst/validation/` e não integram a suíte automática porque dependem de
 arquivos externos do BR-DWGD e do IBGE, ou de resultados previamente
 processados pelo pipeline.
+
+# Citação do pacote
+
+Para obter a referência bibliográfica do pacote no R, use:
+
+```r
+citation("extractmeteobr")
+```
+
+Os metadados de citação também estão em [CITATION.cff](CITATION.cff).
 
 # Referências
 
