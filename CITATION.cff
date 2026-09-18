@@ -8,6 +8,8 @@ authors:
     given-names: Jônatan Dupont
     orcid: 'https://orcid.org/0000-0003-0930-9461'
 version: 0.2.0
+date-released: 2026-09-18
+doi: 10.5281/zenodo.22836695
 license: MIT
 repository-code: 'https://github.com/lhmet/extractmeteobr'
 url: 'https://github.com/lhmet/extractmeteobr'

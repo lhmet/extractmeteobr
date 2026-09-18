@@ -1,0 +1,12 @@
+bibentry(
+  bibtype = "Manual",
+  title = paste0(
+    "extractmeteobr: Extract Area-Weighted Municipal ",
+    "Meteorological Time Series for Brazil"
+  ),
+  author = person("Jônatan Dupont", "Tatsch"),
+  year = "2026",
+  note = "R package version 0.2.0",
+  doi = "10.5281/zenodo.22836695",
+  url = "https://doi.org/10.5281/zenodo.22836695"
+)

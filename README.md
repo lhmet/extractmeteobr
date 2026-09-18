@@ -4,6 +4,9 @@
 # extractmeteobr
 
 <!-- badges: start -->
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22836695.svg)](https://doi.org/10.5281/zenodo.22836695)
+
 <!-- badges: end -->
 
 O **extractmeteobr** transforma dados meteorológicos gradeados do Brasil
@@ -591,6 +594,13 @@ dependem de arquivos externos do BR-DWGD e do IBGE, ou de resultados
 previamente processados pelo pipeline.
 
 # Citação do pacote
+
+A versão **0.2.0** está arquivada no Zenodo com DOI
+[10.5281/zenodo.22836695](https://doi.org/10.5281/zenodo.22836695).
+
+TATSCH, Jônatan Dupont. **extractmeteobr: Extract Area-Weighted
+Municipal Meteorological Time Series for Brazil**. Versão 0.2.0. Zenodo,
+2026. DOI: 10.5281/zenodo.22836695.
 
 Para obter a referência bibliográfica do pacote no R, use:
 
