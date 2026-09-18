@@ -1,8 +1,8 @@
-#' Join municipal attributes and write area-weighted means
+#' Join polygon attributes and write area-weighted means
 #'
-#' Adds municipal attributes to the generic polygon means and writes the
+#' Adds polygon attributes to the area-weighted polygon means and writes the
 #' result to an `.fst` file. Selected polygon attributes are retained before
-#' joining, without requiring municipal-specific attributes.
+#' joining, without requiring domain-specific attributes.
 #'
 #' @param means Tibble returned by [extract_area_weighted_mean()], containing
 #'   non-missing, non-blank character `polygon_id` values present in `polygons`.
@@ -25,7 +25,7 @@
 #' `file_stem` is used. Filename metadata is read from `polygons` independently
 #' of `attribute_cols`.
 #' @export
-join_and_write_municipal_means <- function(
+join_and_write_polygon_means <- function(
     means,
     polygons,
     output_dir,

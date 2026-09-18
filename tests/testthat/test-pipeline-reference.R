@@ -18,7 +18,7 @@ testthat::test_that("pipeline reference follows requested variables and explicit
     crop_netcdfs = function(...) NULL,
     fill_missing_raster_cells = function(...) NULL,
     extract_area_weighted_mean = function(...) NULL,
-    join_and_write_municipal_means = function(...) "completed"
+    join_and_write_polygon_means = function(...) "completed"
   )
 
   result <- run_meteo_pipeline(

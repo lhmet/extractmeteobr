@@ -235,15 +235,15 @@ executá-las separadamente, útil para inspeção ou depuração.
 
 ![](README_files/figure-gfm/pipeline-diagram-1.png)<!-- -->
 
-| Etapa | Arquivo em `R/`                              | Função principal                                                   | Papel no pipeline                                                                                                                       |
-|-------|----------------------------------------------|--------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|
-| 0     | `aggregate-monthly.R`                        | `aggregate_daily_netcdfs_by_month()`                               | Agrega os NetCDFs diários (`pr`, `ETo`) em `SpatRaster` mensais para todo o Brasil. Pré-processamento único, fora do pipeline regional. |
-| 1     | `geographic-data.R`                          | `load_ibge_municipalities()`                                       | Carrega os municípios dos estados ou da região solicitada.                                                                              |
-| 2     | `crop-netcdfs.R`                             | `crop_netcdfs()`                                                   | Recorta os rasters mensais para a extensão desses municípios.                                                                           |
-| 3     | `fill-missing-raster-cells.R`                | `fill_missing_raster_cells()`                                      | Preenche por IDW as células `NA` que interceptam os municípios, somente se necessário.                                                  |
-| 4     | `area-weighted-mean.R`, `municipal-output.R` | `extract_area_weighted_mean()`, `join_and_write_municipal_means()` | Calcula as médias ponderadas por área e grava o arquivo `.fst`.                                                                         |
-| —     | `run-pipeline.R`                             | `run_meteo_pipeline()`                                             | Orquestra as etapas 1 a 4 para um conjunto de estados ou uma região.                                                                    |
-| —     | `interactive-maps.R`                         | `make_interactive_spatial_map()`                                   | Mapa interativo opcional (requer o pacote `tmap`) para inspecionar polígonos e rasters.                                                 |
+| Etapa | Arquivo em `R/`                            | Função principal                                                 | Papel no pipeline                                                                                                                       |
+|-------|--------------------------------------------|------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|
+| 0     | `aggregate-monthly.R`                      | `aggregate_daily_netcdfs_by_month()`                             | Agrega os NetCDFs diários (`pr`, `ETo`) em `SpatRaster` mensais para todo o Brasil. Pré-processamento único, fora do pipeline regional. |
+| 1     | `geographic-data.R`                        | `load_ibge_municipalities()`                                     | Carrega os municípios dos estados ou da região solicitada.                                                                              |
+| 2     | `crop-netcdfs.R`                           | `crop_netcdfs()`                                                 | Recorta os rasters mensais para a extensão desses municípios.                                                                           |
+| 3     | `fill-missing-raster-cells.R`              | `fill_missing_raster_cells()`                                    | Preenche por IDW as células `NA` que interceptam os municípios, somente se necessário.                                                  |
+| 4     | `area-weighted-mean.R`, `polygon-output.R` | `extract_area_weighted_mean()`, `join_and_write_polygon_means()` | Calcula as médias ponderadas por área e grava o arquivo `.fst`.                                                                         |
+| —     | `run-pipeline.R`                           | `run_meteo_pipeline()`                                           | Orquestra as etapas 1 a 4 para um conjunto de estados ou uma região.                                                                    |
+| —     | `interactive-maps.R`                       | `make_interactive_spatial_map()`                                 | Mapa interativo opcional (requer o pacote `tmap`) para inspecionar polígonos e rasters.                                                 |
 
 ## Funções principais e auxiliares
 
@@ -430,7 +430,7 @@ física da célula e $I_{i,t}$ vale 1 para dados disponíveis e 0 para
 `NA`. Zeros participam do cálculo; valores `NA` são excluídos do
 numerador e denominador.
 
-## Saída municipal: `join_and_write_municipal_means()`
+## Saída por polígono: `join_and_write_polygon_means()`
 
 Antes da junção, os identificadores dos polígonos devem ser únicos, não
 ausentes e não vazios. Cada `polygon_id` das médias deve existir nos
@@ -450,7 +450,7 @@ podem ser usadas no nome do arquivo mesmo que não sejam selecionadas em
 existe.
 
 ``` r
-municipal_monthly_means <- join_and_write_municipal_means(
+municipal_monthly_means <- join_and_write_polygon_means(
   means = area_weighted_means,
   polygons = municipalities,
   attribute_cols = c("municipality", "state", "region"),

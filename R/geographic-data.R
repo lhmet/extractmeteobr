@@ -273,7 +273,7 @@ load_ibge_municipalities <- function(
   states <- resolve_brazilian_states(states)
   checkmate::assert_flag(remove_lagoons)
 
-  municipalities <- load_polygon_data(
+  polygons <- load_polygon_data(
     data_path = data_path,
     id_column = "CD_MUN",
     target_crs = target_crs,
@@ -283,28 +283,28 @@ load_ibge_municipalities <- function(
 
   required_columns <- c("NM_MUN", "SIGLA_UF")
   checkmate::assert_names(
-    names(municipalities),
+    names(polygons),
     must.include = required_columns
   )
 
-  names(municipalities)[names(municipalities) == "NM_MUN"] <- "municipality"
-  names(municipalities)[names(municipalities) == "SIGLA_UF"] <- "state"
-  municipalities$state <- tolower(municipalities$state)
+  names(polygons)[names(polygons) == "NM_MUN"] <- "municipality"
+  names(polygons)[names(polygons) == "SIGLA_UF"] <- "state"
+  polygons$state <- tolower(polygons$state)
   state_regions <- get_brazilian_state_regions()
-  municipalities$region <- state_regions$region[
-    match(municipalities$state, state_regions$state)
+  polygons$region <- state_regions$region[
+    match(polygons$state, state_regions$state)
   ]
 
   if (remove_lagoons) {
     lagoon_names <- c("Lagoa Mirim", "Lagoa dos Patos")
-    municipalities <- municipalities[
-      !municipalities$municipality %in% lagoon_names,
+    polygons <- polygons[
+      !polygons$municipality %in% lagoon_names,
       ,
       drop = FALSE
     ]
   }
 
-  municipalities |>
+  polygons |>
     dplyr::select(dplyr::all_of(c("polygon_id", "municipality", "state", "region")))
 }
 

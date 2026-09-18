@@ -83,7 +83,7 @@ run_meteo_pipeline <- function(
     target_crs <- terra::crs(terra::rast(reference_files[[1]]))
   }
 
-  municipalities <- load_ibge_municipalities(
+  polygons <- load_ibge_municipalities(
     states = states,
     target_crs = target_crs,
     data_path = municipality_data_path,
@@ -92,7 +92,7 @@ run_meteo_pipeline <- function(
 
   monthly_rasters <- crop_netcdfs(
     data_path = monthly_data_path,
-    polygons = municipalities,
+    polygons = polygons,
     file_prefixes = purrr::set_names(
       paste0(variables, "_mly_"),
       variables
@@ -101,20 +101,20 @@ run_meteo_pipeline <- function(
 
   filled_monthly_rasters <- fill_missing_raster_cells(
     rasters = monthly_rasters,
-    polygons = municipalities,
+    polygons = polygons,
     window_size = 5L,
     power = 2
   )
 
   area_weighted_means <- extract_area_weighted_mean(
     rasters = filled_monthly_rasters,
-    polygons = municipalities,
+    polygons = polygons,
     id_col = "polygon_id"
   )
 
-  municipal_monthly_means <- join_and_write_municipal_means(
+  polygon_monthly_means <- join_and_write_polygon_means(
     means = area_weighted_means,
-    polygons = municipalities,
+    polygons = polygons,
     id_col = "polygon_id",
     attribute_cols = c("municipality", "state", "region"),
     output_dir = output_dir,
@@ -122,13 +122,13 @@ run_meteo_pipeline <- function(
   )
 
   if (!return_intermediate) {
-    return(municipal_monthly_means)
+    return(polygon_monthly_means)
   }
 
   list(
     monthly_files = monthly_files,
-    municipalities = municipalities,
+    municipalities = polygons,
     filled_monthly_rasters = filled_monthly_rasters,
-    municipal_monthly_means = municipal_monthly_means
+    municipal_monthly_means = polygon_monthly_means
   )
 }

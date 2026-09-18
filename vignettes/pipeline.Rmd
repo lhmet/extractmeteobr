@@ -117,7 +117,7 @@ area_weighted_means <- extract_area_weighted_mean(
   polygons = municipalities
 )
 
-municipal_monthly_means <- join_and_write_municipal_means(
+municipal_monthly_means <- join_and_write_polygon_means(
   means = area_weighted_means,
   polygons = municipalities,
   attribute_cols = c("municipality", "state", "region"),

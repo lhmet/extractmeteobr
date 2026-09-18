@@ -1,3 +1,9 @@
+# extractmeteobr (development version)
+
+* Rename `join_and_write_municipal_means()` to
+  `join_and_write_polygon_means()` to reflect its generic polygon interface.
+  Update direct calls to use the new name; arguments and calculations are unchanged.
+
 # extractmeteobr 0.1.0
 
 First public release.
