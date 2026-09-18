@@ -14,3 +14,4 @@
 ^\.codex$
 ^docs$
 ^vignettes/readme-bck\.Rmd$
+^TODO\.md$

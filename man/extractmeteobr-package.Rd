@@ -14,7 +14,7 @@ time series for Brazilian municipalities and states.
 
 Authors:
 \itemize{
-  \item LHMET \email{lhmet@ufsm.br}
+  \item Jônatan Dupont Tatsch (Contact: jdtatsch [at] gmail.com)
 }
 
 }
